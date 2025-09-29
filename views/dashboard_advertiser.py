@@ -154,7 +154,7 @@ st.dataframe(
             "CPA": "Rp{:,.0f}",
         }
     ).bar(subset=["ROAS", "gross_revenue"], color="#649c4f", vmin=0),
-    use_container_width=True,
+    width="stretch",
     hide_index=True,
 )
 
