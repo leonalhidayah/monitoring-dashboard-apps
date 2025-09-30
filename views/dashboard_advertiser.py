@@ -3,9 +3,7 @@ import streamlit as st
 
 from database import db_manager  # Pastikan file ini ada
 
-st.set_page_config(
-    page_title="Dashboard Iklan Marketplace", page_icon="📊", layout="wide"
-)
+st.set_page_config(layout="wide")
 
 
 def format_number(num):

@@ -234,16 +234,16 @@ with admin_marketplace_tab:
 
                 if df_final_with_customer_id["customer_id"].isnull().any():
                     st.warning(
-                        "Ditemukan customer yang tidak terpetakan, akan di-mapping ke ID 999 (Unknown)."
+                        "Ditemukan customer yang tidak terpetakan, akan di-mapping ke ID 9999 (Unknown)."
                     )
 
-                    df_final_with_customer_id["customer_id"].fillna(999, inplace=True)
+                    df_final_with_customer_id["customer_id"].fillna(9999, inplace=True)
 
                     df_final_with_customer_id["customer_id"] = (
                         df_final_with_customer_id["customer_id"].astype(int)
                     )
 
-                    st.success("Berhasil memetakan customer kosong ke ID 999.")
+                    st.success("Berhasil memetakan customer kosong ke ID 9999.")
 
                 if not df_final_with_customer_id["customer_id"].isnull().any():
                     st.success(
@@ -367,10 +367,10 @@ with admin_marketplace_tab:
 
                 if df_mapped["service_id"].isnull().any():
                     st.warning(
-                        "Ditemukan jasa kirim yang tidak terpetakan, akan di-mapping ke ID 999 (Unknown)."
+                        "Ditemukan jasa kirim yang tidak terpetakan, akan di-mapping ke ID 9999 (Unknown)."
                     )
 
-                    df_mapped["service_id"].fillna(999, inplace=True)
+                    df_mapped["service_id"].fillna(9999, inplace=True)
 
                 df_mapped["service_id"] = df_mapped["service_id"].astype(int)
 
@@ -441,11 +441,11 @@ with admin_marketplace_tab:
                 # 2. Tangani metode pembayaran yang tidak ditemukan
                 if df_mapped["method_id"].isnull().any():
                     st.warning(
-                        "Ditemukan metode pembayaran yang tidak terpetakan, akan di-mapping ke ID 999 (Unknown)."
+                        "Ditemukan metode pembayaran yang tidak terpetakan, akan di-mapping ke ID 9999 (Unknown)."
                     )
 
-                    # Ganti semua NaN di kolom method_id dengan 999
-                    df_mapped["method_id"].fillna(999, inplace=True)
+                    # Ganti semua NaN di kolom method_id dengan 9999
+                    df_mapped["method_id"].fillna(9999, inplace=True)
 
                 df_mapped["method_id"] = df_mapped["method_id"].astype(int)
 
