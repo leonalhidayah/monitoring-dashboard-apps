@@ -1,27 +1,16 @@
 import streamlit as st
 
-from database import db_manager
+st.set_page_config(layout="centered", page_icon="assets/ams-icon-crop.png")
 
-st.title("Hello, Welcome!")
+display_name = st.session_state.get("name", "Guest")
 
+st.title(f"Hi, {display_name}! 👋")
+st.markdown("---")
 
-dim_marketplaces = db_manager.get_dim_marketplaces()
-st.dataframe(dim_marketplaces)
+st.header("Selamat Datang di Dashboard AMS Corp.")
+st.write(
+    "Ini adalah halaman utama Anda. Silakan pilih menu di sidebar kiri untuk memulai."
+)
 
-dim_stores = db_manager.get_dim_stores()
-st.dataframe(dim_stores)
-
-dim_brands = db_manager.get_dim_brands()
-st.dataframe(dim_brands)
-
-customers = db_manager.get_customers()
-st.dataframe(customers.head(20))
-
-products = db_manager.get_products()[["sku", "product_id"]]
-st.dataframe(products.head(20))
-
-dim_shipping_services = db_manager.get_dim_shipping_services()
-st.dataframe(dim_shipping_services)
-
-dim_payment_methods = db_manager.get_dim_payment_methods()
-st.dataframe(dim_payment_methods)
+# Anda bisa menambahkan konten lainnya di sini
+st.balloons()
