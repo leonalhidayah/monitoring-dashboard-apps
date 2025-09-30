@@ -1,14 +1,11 @@
-import bcrypt
 import streamlit as st
+import streamlit_authenticator as stauth
 
 from database.db_connection import get_connection
 
-# 1. Konfigurasi Halaman (Hanya sekali di paling atas)
 st.set_page_config(
     page_title="AMS Dashboard", layout="wide", page_icon="assets/ams-logo-crop.PNG"
 )
-
-# --- DATA & MAPPING ---
 DISPLAY_NAMES = {
     "admin": "Ademin",
     "finance": "Teh Karinnn",
@@ -20,7 +17,6 @@ DISPLAY_NAMES = {
     "hrd": "Pak Yoggs",
 }
 
-# --- DEFINISI HALAMAN ---
 home_page = st.Page(
     "views/home.py", title="Hi There!", icon=":material/home:", default=True
 )
@@ -66,66 +62,81 @@ SUPERUSER_PAGES = {
 }
 
 
-# --- FUNGSI LOGIN ---
-# --- FUNGSI LOGIN ---
-def show_login_form():
-    _, col, _ = st.columns([1, 2, 1])
-    with col:
-        st.title("🗝️ Login")
-        with st.form("login_form"):
-            username = st.text_input("Username", placeholder="Masukkan username")
-            password = st.text_input(
-                "Password", type="password", placeholder="Masukkan password"
-            )
-            submitted = st.form_submit_button("Login", use_container_width=True)
+def fetch_users_from_db():
+    """
+    Mengambil data pengguna dari database dan mengubahnya menjadi format
+    yang dibutuhkan oleh streamlit-authenticator.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
 
-            if submitted:
-                conn = None
-                cursor = None
-                try:
-                    conn = get_connection()
-                    cursor = conn.cursor()
-                    query = "SELECT u.username, u.password_hash, r.name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.username = %s"
-                    cursor.execute(query, (username,))
-                    user_record = cursor.fetchone()
+        query = "SELECT u.username, u.password_hash, r.name FROM users u JOIN roles r ON u.role_id = r.id"
+        cursor.execute(query)
+        users = cursor.fetchall()
 
-                    if user_record and bcrypt.checkpw(
-                        password.encode("utf-8"), user_record[1].encode("utf-8")
-                    ):
-                        db_username, _, db_role = user_record
-                        st.session_state["logged_in"] = True
-                        st.session_state["role"] = db_role
-                        st.session_state["username"] = db_username
-                        st.session_state["name"] = DISPLAY_NAMES.get(db_role)
+        credentials = {"usernames": {}}
+        for user in users:
+            username, password_hash, role_name = user
+            user_display_name = DISPLAY_NAMES.get(role_name, username)
 
-                        st.rerun()
-                    else:
-                        st.error("Username atau password salah!")
-                except Exception as e:
-                    st.error(f"Terjadi kesalahan koneksi: {e}")
-                finally:
-                    if cursor:
-                        cursor.close()
-                    if conn:
-                        conn.close()
+            credentials["usernames"][username] = {
+                "name": user_display_name,
+                "password": password_hash,
+            }
+
+        return credentials
+    except Exception as e:
+        st.error(f"Gagal terhubung ke database: {e}")
+        return {"usernames": {}}
+    finally:
+        if "cursor" in locals() and cursor is not None:
+            cursor.close()
+        if "conn" in locals() and conn is not None:
+            conn.close()
 
 
-# --- LOGIKA UTAMA APLIKASI ---
-# Inisialisasi semua kunci session_state
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.role = None
-    st.session_state.username = None
-    st.session_state.name = None
+def get_user_role(username):
+    """Mendapatkan role dari user yang berhasil login (case-insensitive)."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
 
-# Tampilkan halaman berdasarkan status login
-if not st.session_state.logged_in:
-    show_login_form()
-else:
-    user_role = st.session_state.role
+        query = "SELECT r.name FROM roles r JOIN users u ON r.id = u.role_id WHERE LOWER(u.username) = %s"
 
-    # KUNCI UTAMA: Mengambil nama dari session_state untuk ditampilkan
-    display_name = st.session_state.name
+        cursor.execute(query, (username.lower(),))
+
+        result = cursor.fetchone()
+
+        if result:
+            return result[0].strip().lower()
+        return None
+
+    finally:
+        if "cursor" in locals() and cursor:
+            cursor.close()
+        if "conn" in locals() and conn:
+            conn.close()
+
+
+credentials = fetch_users_from_db()
+
+# 2. Inisialisasi authenticator
+# Ganti 'some_random_string' dengan secret key Anda sendiri!
+authenticator = stauth.Authenticate(
+    credentials,
+    cookie_name=st.secrets["cookie"]["name"],
+    key=st.secrets["cookie"]["key"],
+    cookie_expiry_days=st.secrets["cookie"]["expiry"],
+)
+
+_, col, _ = st.columns([1, 1.5, 1])
+with col:
+    authenticator.login()
+
+# 4. Logika setelah login
+if st.session_state["authentication_status"]:
+    user_role = get_user_role(st.session_state["username"])
 
     if user_role == "superuser":
         accessible_pages = SUPERUSER_PAGES
@@ -134,17 +145,25 @@ else:
 
     if not accessible_pages:
         st.error("Peran Anda tidak memiliki akses ke halaman manapun.")
-        if st.button("Logout"):
-            st.session_state.clear()
-            st.rerun()
+        with st.sidebar:
+            authenticator.logout("Logout", "sidebar")
     else:
         st.logo("assets/ams-logo-white-crop.PNG")
-        pg = st.navigation(accessible_pages)
 
         with st.sidebar:
             st.text("Made with ❤️ by AMS Corp.")
-            if st.button("Logout", use_container_width=True, type="primary"):
-                st.session_state.clear()
-                st.rerun()
+            authenticator.logout("Logout", "sidebar", key="unique_logout_button")
+            # st.divider()
 
+        pg = st.navigation(accessible_pages)
         pg.run()
+
+elif st.session_state["authentication_status"] is False:
+    _, col, _ = st.columns([1, 1.5, 1])
+    with col:
+        st.error("Username atau password salah!")
+
+elif st.session_state["authentication_status"] is None:
+    _, col, _ = st.columns([1, 1.5, 1])
+    with col:
+        st.info("Silakan masukkan username dan password Anda")
