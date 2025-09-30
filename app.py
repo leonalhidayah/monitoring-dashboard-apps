@@ -138,7 +138,7 @@ else:
             st.session_state.clear()
             st.rerun()
     else:
-        st.logo("assets/ams-logo-white-crop.png")
+        st.logo("assets/ams-logo-white-crop.PNG")
         pg = st.navigation(accessible_pages)
 
         with st.sidebar:
