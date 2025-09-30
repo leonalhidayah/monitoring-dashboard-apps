@@ -64,8 +64,8 @@ with admin_marketplace_tab:
             if "selected_date" not in st.session_state:
                 st.session_state.selected_date = now_in_jakarta.date()
 
-            # if "selected_time" not in st.session_state:
-            #     st.session_state.selected_time = now_in_jakarta.time()
+            if "selected_time" not in st.session_state:
+                st.session_state.selected_time = now_in_jakarta.time()
 
             selected_date = st.date_input(
                 "Pilih tanggal input",
