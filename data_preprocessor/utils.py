@@ -1,3 +1,4 @@
+import io
 import re
 from datetime import datetime
 from pathlib import Path
@@ -5,6 +6,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
+from openpyxl.utils import get_column_letter
 
 project_root = Path().cwd().parent
 
@@ -60,6 +64,16 @@ ERA_STORE_LIST = [
     "LZ erassgo store id",
 ]
 
+KDK_STORE_LIST = [
+    "SP kudaku",
+    "SP kudaku store",
+    "SP kudaku official store",
+    "SP kudaku id",
+    "SP kudaku indonesia",
+    "TT kudaku milk",
+    "LZ kudaku",
+]
+
 TOKO_BANDUNG = ["SP zhi yang yao official", "SP erassgo bandung"]
 MARKETPLACE_LIST = ["Lazada", "Shopee", "TikTok", "Tokopedia"]
 BRAND_LIST = ["Zhi Yang Yao", "Enzhico", "Erassgo"]
@@ -71,6 +85,21 @@ AKUN_LIST = [
     "Erassgo mall 1",
     "Enzhico CPAS 1",
 ]
+
+
+def get_store_list_by_project(project_name):
+    if project_name == "Zhi Yang Yao":
+        return ZYY_STORE_LIST
+    elif project_name == "Enzhico":
+        return ENZ_STORE_LIST
+    elif project_name == "Erassgo":
+        return ERA_STORE_LIST
+    elif project_name == "Kudaku":
+        return KDK_STORE_LIST
+    elif project_name == "Juwara Herbal":
+        return JH_STORE_LIST
+    else:
+        return None
 
 
 # -- ORDERS DATA
@@ -310,16 +339,16 @@ def add_timestamp_and_sesi_columns(
 
 
 # FINANCE DATA
-def initialize_omset_data_session(brand_name, marketplace_list, store_list):
+def initialize_omset_data_session(project_name, marketplace_list, store_list):
     """
     Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
 
     Args:
-        brand_name (str): Nama brand untuk kunci di session_state.
+        project_name (str): Nama project untuk kunci di session_state.
         marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
         store_list (list): Daftar nama toko yang akan diisi ke DataFrame.
     """
-    session_key = f"df_{brand_name}_omset"
+    session_key = f"df_{project_name}_omset"
 
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
@@ -337,16 +366,11 @@ def initialize_omset_data_session(brand_name, marketplace_list, store_list):
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_omset_column_config(brand):
+def get_omset_column_config(project_name):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
-    if brand == "Zhi Yang Yao":
-        store_list = ZYY_STORE_LIST
-    elif brand == "Enzhico":
-        store_list = ENZ_STORE_LIST
-    elif brand == "Erassgo":
-        store_list = ERA_STORE_LIST
+    store_list = get_store_list_by_project(project_name)
 
     return {
         "Tanggal": st.column_config.DateColumn(
@@ -381,16 +405,16 @@ def get_omset_column_config(brand):
     }
 
 
-def initialize_ads_data_session(brand_name, marketplace_list, store_list):
+def initialize_ads_data_session(project_name, marketplace_list, store_list):
     """
-    Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
+    Menginisialisasi DataFrame di st.session_state untuk project tertentu jika belum ada.
 
     Args:
-        brand_name (str): Nama brand untuk kunci di session_state.
+        project_name (str): Nama project untuk kunci di session_state.
         marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
         store_list (list): Daftar nama toko yang akan diisi ke DataFrame.
     """
-    session_key = f"df_{brand_name}_ads"
+    session_key = f"df_{project_name}_ads"
 
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
@@ -406,16 +430,11 @@ def initialize_ads_data_session(brand_name, marketplace_list, store_list):
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_ads_column_config(brand):
+def get_ads_column_config(project_name):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
-    if brand == "Zhi Yang Yao":
-        store_list = ZYY_STORE_LIST
-    elif brand == "Enzhico":
-        store_list = ENZ_STORE_LIST
-    elif brand == "Erassgo":
-        store_list = ERA_STORE_LIST
+    store_list = get_store_list_by_project(project_name)
 
     return {
         "Tanggal": st.column_config.DateColumn(
@@ -467,16 +486,11 @@ def initialize_stock_data_session():
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_stock_column_config(brand):
+def get_stock_column_config(project_name):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
-    if brand == "Zhi Yang Yao":
-        store_list = ZYY_STORE_LIST
-    elif brand == "Enzhico":
-        store_list = ENZ_STORE_LIST
-    elif brand == "Erassgo":
-        store_list = ERA_STORE_LIST
+    store_list = get_store_list_by_project(project_name)
 
     return {
         "Tanggal": st.column_config.DateColumn(
@@ -514,7 +528,7 @@ def initialize_non_ads_data_session(branch_name):
     Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
 
     Args:
-        brand_name (str): Nama brand untuk kunci di session_state.
+        project_name (str): Nama brand untuk kunci di session_state.
         marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
         store_list (list): Daftar nama toko yang akan diisi ke DataFrame.
     """
@@ -560,16 +574,16 @@ def get_non_ads_column_config():
 
 
 # ADVERTISER DATA
-def initialize_marketplace_data_session(brand_name, marketplace_list, store_list):
+def initialize_marketplace_data_session(project_name, marketplace_list, store_list):
     """
     Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
 
     Args:
-        brand_name (str): Nama brand untuk kunci di session_state.
+        project_name (str): Nama brand untuk kunci di session_state.
         marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
         store_list (list): Daftar nama toko yang akan diisi ke DataFrame.
     """
-    session_key = f"df_{brand_name}_marketplace"
+    session_key = f"df_{project_name}_marketplace"
 
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
@@ -588,18 +602,11 @@ def initialize_marketplace_data_session(brand_name, marketplace_list, store_list
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_marketplace_column_config(brand):
+def get_marketplace_column_config(project_name):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
-    if brand == "Zhi Yang Yao":
-        store_list = ZYY_STORE_LIST
-    elif brand == "Enzhico":
-        store_list = ENZ_STORE_LIST
-    elif brand == "Enzhico":
-        store_list = ENZ_STORE_LIST
-    elif brand == "Erassgo":
-        store_list = ERA_STORE_LIST
+    store_list = get_store_list_by_project(project_name)
 
     return {
         "Tanggal": st.column_config.DateColumn(
@@ -701,3 +708,86 @@ def get_cpas_column_config():
             format="accounting",
         ),
     }
+
+
+# DASHBOARD ADMIN
+def generate_excel_bytes(df, group_cols, value_col, aggfunc="sum"):
+    """
+    Membuat report Excel dari hasil groupby dan mengembalikannya sebagai
+    objek bytes untuk di-download.
+    """
+    if not group_cols:
+        raise ValueError("Parameter 'group_cols' tidak boleh kosong.")
+
+    brand_col = group_cols[0]
+    grouped = (
+        df.groupby(group_cols, as_index=False)[value_col]
+        .agg(aggfunc)
+        .sort_values(by=brand_col)
+    )
+    grand_total = grouped[value_col].sum()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Report"
+
+    header = group_cols + [value_col.capitalize()]
+    ws.append(header)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    current_row_idx = 2
+    for brand_name, brand_df in grouped.groupby(brand_col):
+        start_merge_row = current_row_idx
+        for _, data_row in brand_df.iterrows():
+            ws.append(list(data_row))
+            current_row_idx += 1
+
+        subtotal_value = brand_df[value_col].sum()
+        subtotal_row_data = (
+            [f"Subtotal {brand_name}"] + [""] * (len(group_cols) - 1) + [subtotal_value]
+        )
+        ws.append(subtotal_row_data)
+        for cell in ws[current_row_idx]:
+            cell.font = Font(bold=True)
+        current_row_idx += 1
+
+        end_merge_row = current_row_idx - 2
+        if start_merge_row < end_merge_row:
+            ws.merge_cells(
+                start_row=start_merge_row,
+                start_column=1,
+                end_row=end_merge_row,
+                end_column=1,
+            )
+            ws.cell(start_merge_row, 1).alignment = Alignment(
+                horizontal="left", vertical="center"
+            )
+
+    grand_total_row_data = (
+        ["Grand Total"] + [""] * (len(group_cols) - 1) + [grand_total]
+    )
+    ws.append(grand_total_row_data)
+    for cell in ws[ws.max_row]:
+        cell.font = Font(bold=True, size=12)
+
+    for col_idx, column_cells in enumerate(ws.columns, 1):
+        max_length = 0
+        column_letter = get_column_letter(col_idx)
+        for cell in column_cells:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = max_length + 2
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    # --- PERUBAHAN UTAMA ADA DI SINI ---
+    # Simpan workbook ke dalam buffer memori
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    # Pindahkan "cursor" buffer ke awal
+    buffer.seek(0)
+    return buffer

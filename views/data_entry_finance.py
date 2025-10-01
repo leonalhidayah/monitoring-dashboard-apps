@@ -187,6 +187,16 @@ data = {
             "TP zhi yang yao official medan",
         ],
     },
+    "Juwara Herbal": {
+        "Marketplace": [
+            "Shopee",
+            "TikTok",
+        ],
+        "Nama Toko": [
+            "SP juwara herbal official store",
+            "TT juwara herbal",
+        ],
+    },
     "Enzhico": {
         "Marketplace": [
             "Shopee",
@@ -215,6 +225,46 @@ data = {
             "TP enzhico official store",
         ],
     },
+    "Erassgo": {
+        "Marketplace": [
+            "Shopee",
+            "Shopee",
+            "Shopee",
+            "Shopee",
+            "Tokopedia",
+            "Lazada",
+            "Lazada",
+        ],
+        "Nama Toko": [
+            "SP erassgo official",
+            "SP erassgo official store",
+            "SP erassgo.co",
+            "SP erassgo makassar",
+            "TP erassgo",
+            "LZ erassgo",
+            "LZ erassgo store id",
+        ],
+    },
+    "Kudaku": {
+        "Marketplace": [
+            "Shopee",
+            "Shopee",
+            "Shopee",
+            "Shopee",
+            "Shopee",
+            "TikTok",
+            "Lazada",
+        ],
+        "Nama Toko": [
+            "SP kudaku",
+            "SP kudaku store",
+            "SP kudaku official store",
+            "SP kudaku id",
+            "SP kudaku indonesia",
+            "TT kudaku milk",
+            "LZ kudaku",
+        ],
+    },
 }
 
 with omset_tab:
@@ -222,26 +272,26 @@ with omset_tab:
     tab_names = list(data.keys())
     tabs = st.tabs(tab_names)
 
-    for i, brand_name in enumerate(tab_names):
+    for i, project_name in enumerate(tab_names):
         with tabs[i]:
-            df_key = f"df_{brand_name.lower().replace(' ', '_')}_omset"
-            preview_key = f"show_preview_{brand_name.lower().replace(' ', '_')}_omset"
+            df_key = f"df_{project_name.lower().replace(' ', '_')}_omset"
+            preview_key = f"show_preview_{project_name.lower().replace(' ', '_')}_omset"
 
             # Inisialisasi DataFrame
             utils.initialize_omset_data_session(
-                brand_name.lower().replace(" ", "_"),
-                data[brand_name]["Marketplace"],
-                data[brand_name]["Nama Toko"],
+                project_name.lower().replace(" ", "_"),
+                data[project_name]["Marketplace"],
+                data[project_name]["Nama Toko"],
             )
 
             # Form untuk input & pratinjau
-            with st.form(f"form_{brand_name.lower().replace(' ', '_')}_omset"):
+            with st.form(f"form_{project_name.lower().replace(' ', '_')}_omset"):
                 # Data editor → hasilnya langsung overwrite ke session_state
                 st.session_state[df_key] = st.data_editor(
                     st.session_state[df_key],
                     num_rows="dynamic",
                     width="stretch",
-                    column_config=utils.get_omset_column_config(brand_name),
+                    column_config=utils.get_omset_column_config(project_name),
                 )
 
                 st.write("Tekan tombol di bawah untuk pratinjau dan menyimpan data.")
@@ -256,21 +306,21 @@ with omset_tab:
                 if not cleaned_df.empty:
                     st.markdown("---")
                     st.subheader(
-                        f"Pratinjau Data untuk {brand_name}_{datetime.today().strftime('%d-%M-%Y %H:%M:%S')}"
+                        f"Pratinjau Data untuk {project_name}_{datetime.today().strftime('%d-%M-%Y %H:%M:%S')}"
                     )
                     st.write("Silakan cek kembali data Anda sebelum disimpan permanen.")
 
                     st.dataframe(
                         cleaned_df,
                         width="stretch",
-                        column_config=utils.get_omset_column_config(brand_name),
+                        column_config=utils.get_omset_column_config(project_name),
                     )
 
                     button_cols = st.columns([8, 10, 3])
                     with button_cols[0]:
                         if st.button(
                             "Ya, Simpan ke Database",
-                            key=f"save_button_{brand_name.lower().replace(' ', '_')}_omset",
+                            key=f"save_button_{project_name.lower().replace(' ', '_')}_omset",
                         ):
                             result = db_manager.insert_omset_data(cleaned_df)
                             if result["status"] == "success":
@@ -278,12 +328,12 @@ with omset_tab:
                                 st.session_state[preview_key] = False
                             else:
                                 st.error(
-                                    f"Gagal menyimpan data omset {brand_name}: {result['message']}"
+                                    f"Gagal menyimpan data omset {project_name}: {result['message']}"
                                 )
                     with button_cols[2]:
                         if st.button(
                             "OMG, Ada yg slh",
-                            key=f"update_button_{brand_name.lower().replace(' ', '_')}_omset",
+                            key=f"update_button_{project_name.lower().replace(' ', '_')}_omset",
                         ):
                             st.session_state[preview_key] = False
                             st.rerun()
@@ -296,26 +346,26 @@ with budget_ads_tab:
     tab_names = list(data.keys())
     tabs = st.tabs(tab_names)
 
-    for i, brand_name in enumerate(tab_names):
+    for i, project_name in enumerate(tab_names):
         with tabs[i]:
-            df_key = f"df_{brand_name.lower().replace(' ', '_')}_ads"
-            preview_key = f"show_preview_{brand_name.lower().replace(' ', '_')}_ads"
+            df_key = f"df_{project_name.lower().replace(' ', '_')}_ads"
+            preview_key = f"show_preview_{project_name.lower().replace(' ', '_')}_ads"
 
             # Inisialisasi DataFrame
             utils.initialize_ads_data_session(
-                brand_name.lower().replace(" ", "_"),
-                data[brand_name]["Marketplace"],
-                data[brand_name]["Nama Toko"],
+                project_name.lower().replace(" ", "_"),
+                data[project_name]["Marketplace"],
+                data[project_name]["Nama Toko"],
             )
 
             # Form untuk input & pratinjau
-            with st.form(f"form_{brand_name.lower().replace(' ', '_')}_ads"):
+            with st.form(f"form_{project_name.lower().replace(' ', '_')}_ads"):
                 # Data editor → hasilnya langsung overwrite ke session_state
                 st.session_state[df_key] = st.data_editor(
                     st.session_state[df_key],
                     num_rows="dynamic",
                     width="stretch",
-                    column_config=utils.get_ads_column_config(brand_name),
+                    column_config=utils.get_ads_column_config(project_name),
                 )
 
                 st.write("Tekan tombol di bawah untuk pratinjau dan menyimpan data.")
@@ -330,21 +380,21 @@ with budget_ads_tab:
                 if not cleaned_df.empty:
                     st.markdown("---")
                     st.subheader(
-                        f"Pratinjau Data untuk {brand_name}_{datetime.today().strftime('%d-%M-%Y %H:%M:%S')}"
+                        f"Pratinjau Data untuk {project_name}_{datetime.today().strftime('%d-%M-%Y %H:%M:%S')}"
                     )
                     st.write("Silakan cek kembali data Anda sebelum disimpan permanen.")
 
                     st.dataframe(
                         cleaned_df,
                         width="stretch",
-                        column_config=utils.get_ads_column_config(brand_name),
+                        column_config=utils.get_ads_column_config(project_name),
                     )
 
                     button_cols = st.columns([8, 10, 3])
                     with button_cols[0]:
                         if st.button(
                             "Ya, Simpan ke Database",
-                            key=f"save_button_{brand_name.lower().replace(' ', '_')}_ads",
+                            key=f"save_button_{project_name.lower().replace(' ', '_')}_ads",
                         ):
                             result = db_manager.insert_budget_ads_data(cleaned_df)
                             if result["status"] == "success":
@@ -352,12 +402,12 @@ with budget_ads_tab:
                                 st.session_state[preview_key] = False
                             else:
                                 st.error(
-                                    f"Gagal menyimpan data omset {brand_name}: {result['message']}"
+                                    f"Gagal menyimpan data omset {project_name}: {result['message']}"
                                 )
                     with button_cols[2]:
                         if st.button(
                             "OMG, Ada yg slh",
-                            key=f"update_button_{brand_name.lower().replace(' ', '_')}_ads",
+                            key=f"update_button_{project_name.lower().replace(' ', '_')}_ads",
                         ):
                             st.session_state[preview_key] = False
                             st.rerun()

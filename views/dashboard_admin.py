@@ -1,33 +1,10 @@
-import numpy as np
 import pandas as pd
 import streamlit as st
 
+from data_preprocessor import utils
 from database import db_manager
 
 st.set_page_config(page_title="Dashboard Admin AMS", layout="wide")
-
-
-@st.cache_data
-def load_data():
-    """
-    Fungsi ini memuat data dari view v_shipment_details.
-    Untuk sekarang, kita akan membuat data sampel yang realistis.
-    """
-    data = {
-        "no_resi": [f"AMS{100 + i}" for i in range(100)]
-        + [f"AMS{100 + i}" for i in range(20)],
-        "nama_brand": np.random.choice(
-            ["Brand A", "Brand B", "Brand C", "Brand D"], 120
-        ),
-        "timestamp_input_data": pd.to_datetime(
-            pd.date_range(start="2025-09-01", periods=120, freq="4H")
-        ),
-        "Sesi": np.random.choice(["SESI 1", "SESI 2", "SESI 3", "SESI 4"], 120),
-    }
-    df = pd.DataFrame(data)
-    df["timestamp_input_data"] = pd.to_datetime(df["timestamp_input_data"])
-    return df
-
 
 df = db_manager.get_admin_shipments()
 
@@ -108,16 +85,27 @@ else:
     st.warning("Tidak ada data untuk ditampilkan dengan filter yang dipilih.")
 
 # Visualisasi 2: Jumlah Resi Unik per Brand (Bar Chart)
-st.subheader("Perbandingan Jumlah Resi Unik per Brand")
-if not df_filtered.empty:
-    brand_unique_resi = (
-        df_filtered.groupby("nama_brand")["no_resi"]
-        .nunique()
-        .sort_values(ascending=False)
-    )
-    st.bar_chart(brand_unique_resi)
-else:
-    st.warning("Tidak ada data untuk ditampilkan dengan filter yang dipilih.")
+bar_brand, bar_sku = st.columns(2)
+with bar_brand:
+    st.subheader("Perbandingan Jumlah Resi Unik per Brand")
+    if not df_filtered.empty:
+        brand_unique_resi = (
+            df_filtered.groupby("nama_brand")["no_resi"]
+            .nunique()
+            .sort_values(ascending=False)
+        )
+        st.bar_chart(brand_unique_resi)
+    else:
+        st.warning("Tidak ada data untuk ditampilkan dengan filter yang dipilih.")
+with bar_sku:
+    st.subheader("Perbandingan Jumlah Resi Unik per SKU")
+    if not df_filtered.empty:
+        sku_unique_resi = (
+            df_filtered.groupby("sku")["no_resi"].nunique().sort_values(ascending=False)
+        )
+        st.bar_chart(sku_unique_resi)
+    else:
+        st.warning("Tidak ada data untuk ditampilkan dengan filter yang dipilih.")
 
 # Menampilkan data mentah (opsional)
 if st.checkbox("Tampilkan Data Mentah Hasil Filter"):
@@ -125,3 +113,57 @@ if st.checkbox("Tampilkan Data Mentah Hasil Filter"):
         st.write(df_filtered.reset_index(drop=True))
     else:
         st.info("Tidak ada data mentah untuk ditampilkan.")
+
+st.subheader("Pengen Buat Laporan? Sini sini")
+col1, col2 = st.columns(2)  # Buat 2 kolom agar rapi
+
+grouping_cols = ["nama_brand", "sku"]
+available_value_cols = ["jumlah_item", "no_resi", "order_id"]
+
+with col1:
+    selected_value_col = st.selectbox(
+        "Pilih data yang ingin dihitung:",
+        options=available_value_cols,
+        help="Pilih kolom numerik atau ID yang ingin Anda agregasi.",
+    )
+
+# Logika untuk menentukan pilihan agregasi tetap sama
+if selected_value_col == "jumlah_item":
+    agg_options = {
+        "Jumlah Total (Sum)": "sum",
+        "Rata-rata (Mean)": "mean",
+        "Jumlah Transaksi (Count)": "count",
+    }
+else:
+    agg_options = {
+        "Hitung Item Unik (Nunique)": "nunique",
+        "Hitung Semua Item (Count)": "count",
+    }
+
+with col2:
+    selected_agg_display = st.selectbox(
+        "Pilih metode kalkulasi:",
+        options=list(agg_options.keys()),
+        help="Metode akan disesuaikan berdasarkan tipe data yang Anda pilih.",
+    )
+selected_aggfunc = agg_options[selected_agg_display]
+
+if st.button("Buat Laporan", use_container_width=True, type="primary"):
+    with st.spinner("Mohon tunggu, laporan sedang dibuat..."):
+        excel_bytes = utils.generate_excel_bytes(
+            df=df_filtered,
+            group_cols=grouping_cols,
+            value_col=selected_value_col,
+            aggfunc=selected_aggfunc,
+        )
+
+        st.success("Laporan Siap Diunduh!")
+        file_name = f"report_{selected_value_col}_by_{selected_aggfunc}_{pd.Timestamp.now()}.xlsx"
+
+        st.download_button(
+            label="**Download Laporan Excel**",
+            data=excel_bytes,
+            file_name=file_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )

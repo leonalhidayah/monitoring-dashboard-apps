@@ -422,7 +422,7 @@ with admin_marketplace_tab:
 
                 conflict_cols = ["no_resi"]
 
-                update_cols = ["waktu_pesanan_dikirim", "waktu_cetak"]
+                update_cols = ["sesi", "waktu_pesanan_dikirim", "waktu_cetak"]
 
                 insert_and_notify(
                     df_shipments_final,
