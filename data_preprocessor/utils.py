@@ -29,6 +29,11 @@ ZYY_STORE_LIST = [
     "TP zhi yang yao official medan",
 ]
 
+JH_STORE_LIST = [
+    "SP juwara herbal official store",
+    "TT juwara herbal",
+]
+
 ENZ_STORE_LIST = [
     "SP enzhico",
     "SP enzhico shop",
@@ -55,6 +60,7 @@ ERA_STORE_LIST = [
     "LZ erassgo store id",
 ]
 
+TOKO_BANDUNG = ["SP zhi yang yao official", "SP erassgo bandung"]
 MARKETPLACE_LIST = ["Lazada", "Shopee", "TikTok", "Tokopedia"]
 BRAND_LIST = ["Zhi Yang Yao", "Enzhico", "Erassgo"]
 AKUN_LIST = [
@@ -251,11 +257,9 @@ def add_new_columns(df: pd.DataFrame) -> pd.DataFrame:
     df["is_fake_order"] = np.where(
         df["pesan_dari_pembeli"].str.contains("FO", na=False), True, False
     )
+
     df["gudang_asal"] = np.where(
-        (df["nama_marketplace"] == "Shopee")
-        & (df["nama_toko"] == "zhi yang yao official"),
-        "Bandung",
-        "Jakarta",
+        df["nama_toko"].isin(TOKO_BANDUNG), "Bandung", "Jakarta"
     )
 
     brand_map = {
@@ -590,6 +594,8 @@ def get_marketplace_column_config(brand):
     """
     if brand == "Zhi Yang Yao":
         store_list = ZYY_STORE_LIST
+    elif brand == "Enzhico":
+        store_list = ENZ_STORE_LIST
     elif brand == "Enzhico":
         store_list = ENZ_STORE_LIST
     elif brand == "Erassgo":
