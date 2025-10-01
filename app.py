@@ -17,14 +17,25 @@ DISPLAY_NAMES = {
     "hrd": "Pak Yoggs",
 }
 
+
 home_page = st.Page(
     "views/home.py", title="Hi There!", icon=":material/home:", default=True
 )
+
+# DASHBOARD
 advertiser_dashboard_page = st.Page(
     "views/dashboard_advertiser.py",
     title="Advertiser Dashboard",
     icon=":material/analytics:",
 )
+
+admin_dashboard_page = st.Page(
+    "views/dashboard_admin.py",
+    title="Admin Dashboard",
+    icon=":material/analytics:",
+)
+
+# MENU
 entry_advertiser_page = st.Page(
     "views/data_entry_advertiser.py", title="Advertiser", icon=":material/campaign:"
 )
@@ -52,7 +63,7 @@ PAGE_MAPPING = {
 
 SUPERUSER_PAGES = {
     "Home": [home_page],
-    "Dashboards": [advertiser_dashboard_page],
+    "Dashboards": [advertiser_dashboard_page, admin_dashboard_page],
     "Data Entry": [
         entry_admin_page,
         entry_finance_page,

@@ -38,9 +38,16 @@ st.markdown(
 with admin_marketplace_tab:
     st.subheader("Unggah Data Admin Marketplace")
     st.markdown("""
+        **Aturan Uploud:**
+        - SESI 1: 07:00 - 12:00
+        - SESI 2: 12:00 - 14:00
+        - SESI 3: 14:00 - 16:00
+        - SESI 4: 16:00 - 07:00
+    """)
+    st.markdown("""
         **Cara Ekspor Data dari BigSeller:**
-        1. Pastikan Jenis Ekspor: Ekspor Berdasarkan SKU Toko
-        2. Pastikan Jenis Template: Template Standar
+        - Pastikan Jenis Ekspor: Ekspor Berdasarkan SKU Toko
+        - Pastikan Jenis Template: Template Standar
     """)
 
     uploaded_file = st.file_uploader(

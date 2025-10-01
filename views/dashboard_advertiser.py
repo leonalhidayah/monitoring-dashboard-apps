@@ -68,6 +68,7 @@ df.dropna(subset=["brand"], inplace=True)  # Hapus baris tanpa brand
 
 # --- TAMPILAN UTAMA & FILTER ---
 st.title("📊 Report Iklan Marketplace")
+st.markdown("---")
 
 filter1, filter2 = st.columns(2)
 with filter1:

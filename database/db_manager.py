@@ -18,13 +18,13 @@ warnings.filterwarnings("ignore")
 
 
 # --- DIM_STORE
-def get_table_data(table_name: str, order_by_column: str) -> pd.DataFrame:
+def get_table_data(table_name: str, order_by_column: str = None) -> pd.DataFrame:
     """
     Mengambil semua data dari tabel yang ditentukan secara generik.
 
     Args:
         table_name (str): Nama tabel yang akan diambil datanya.
-        order_by_column (str): Nama kolom untuk mengurutkan data.
+        order_by_column (str, optional): Nama kolom untuk mengurutkan data. Default None.
 
     Returns:
         pd.DataFrame: DataFrame berisi data tabel, atau DataFrame kosong jika error.
@@ -32,18 +32,18 @@ def get_table_data(table_name: str, order_by_column: str) -> pd.DataFrame:
     conn = None
     try:
         conn = get_connection()
-        # Menggunakan f-string untuk membuat query dinamis
-        query = f"""
-            SELECT
-                *
-            FROM
-                {table_name}
-            ORDER BY
-                {order_by_column} ASC;
-        """
+
+        # Query dasar
+        query = f"SELECT * FROM {table_name}"
+
+        # Tambahkan ORDER BY jika kolom disediakan
+        if order_by_column:
+            query += f" ORDER BY {order_by_column} ASC"
+
         df = pd.read_sql(query, conn)
         logging.info(f"Berhasil mengambil {len(df)} records dari tabel {table_name}.")
         return df
+
     except (Exception, psycopg2.DatabaseError) as error:
         logging.error(
             f"Error saat mengambil data dari {table_name}: {error}", exc_info=True
@@ -53,6 +53,7 @@ def get_table_data(table_name: str, order_by_column: str) -> pd.DataFrame:
         if conn:
             conn.close()
             logging.info(f"Koneksi database untuk mengambil data {table_name} ditutup.")
+
 
 
 def get_dim_marketplaces():
@@ -92,8 +93,26 @@ def get_dim_shipping_services():
 def get_dim_payment_methods():
     """Mengambil semua data dari tabel dim_payment_methods."""
     return get_table_data(
-        table_name="dim_payment_methods", order_by_column="method_id "
+        table_name="dim_payment_methods"
     )
+    
+def get_shipments():
+    """Mengambil semua data dari tabel shipments."""
+    return get_table_data(
+        table_name="shipments"
+    )
+    
+def get_orders():
+    """Mengambil semua data dari tabel orders."""
+    return get_table_data(table_name="orders")
+
+def get_order_items():
+    """Mengambil semua data dari tabel order_items."""
+    return get_table_data(table_name="order_items")
+
+def get_admin_shipments():
+    """Mengambil semua data dari tabel admin_shipments."""
+    return get_table_data(table_name="admin_shipments")
 
 
 # --- ADVERTISER DATA ---
