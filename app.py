@@ -17,7 +17,7 @@ DISPLAY_NAMES = {
     "hrd": "Pak Yoggs",
 }
 
-# HOME PAGE
+
 home_page = st.Page(
     "views/home.py", title="Hi There!", icon=":material/home:", default=True
 )
