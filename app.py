@@ -50,7 +50,11 @@ entry_stock_page = st.Page(
 )
 
 PAGE_MAPPING = {
-    "admin": {"Home": [home_page], "Menu": [entry_admin_page]},
+    "admin": {
+        "Home": [home_page],
+        "Dashboard": [admin_dashboard_page],
+        "Menu": [entry_admin_page],
+    },
     "finance": {"Home": [home_page], "Menu": [entry_finance_page]},
     "advertiser": {
         "Home": [home_page],
@@ -58,7 +62,10 @@ PAGE_MAPPING = {
         "Menu": [entry_advertiser_page],
     },
     "stock": {"Home": [home_page], "Menu": [entry_stock_page]},
-    "owner": {"Home": [home_page], "Dashboard": [advertiser_dashboard_page]},
+    "owner": {
+        "Home": [home_page],
+        "Dashboard": [advertiser_dashboard_page, admin_dashboard_page],
+    },
 }
 
 SUPERUSER_PAGES = {
