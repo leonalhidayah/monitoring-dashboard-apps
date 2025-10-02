@@ -76,14 +76,22 @@ with admin_marketplace_tab:
 
             selected_date = st.date_input(
                 "Pilih tanggal input",
-                # value=st.session_state.selected_date,
                 key="selected_date",
             )
 
             selected_time = st.time_input(
                 "Pilih waktu input",
-                # value=st.session_state.selected_time,
                 key="selected_time",
+            )
+
+            # Definisikan opsi untuk sesi
+            list_sesi = ["SESI 1", "SESI 2", "SESI 3", "SESI 4"]
+
+            # Buat selectbox untuk memilih sesi
+            selected_sesi = st.selectbox(
+                "Pilih Sesi",  # Label diubah agar lebih jelas
+                options=list_sesi,  # Menambahkan opsi sesi
+                key="selected_sesi",  # Key diubah agar lebih deskriptif
             )
 
             # Tombol untuk memproses dan menyimpan data
@@ -91,18 +99,25 @@ with admin_marketplace_tab:
                 st.info("Memproses data, mohon tunggu...")
 
                 # Panggil fungsi pembersihan dari utils
+                # Diasumsikan df_raw sudah ada dari file upload
                 df_clean = utils.clean_admin_marketplace_data(df_raw)
 
                 # Panggil fungsi penambahan kolom baru
-                df_with_new_cols = utils.add_new_columns(df_clean)
+                df_final = utils.add_new_columns(df_clean)
 
-                # Tambahkan timestamp dan sesi
+                # Gabungkan tanggal dan waktu yang dipilih pengguna untuk membuat timestamp
                 timestamp_input = datetime.datetime.combine(
                     selected_date, selected_time
                 )
-                df_final = utils.add_timestamp_and_sesi_columns(
-                    df_with_new_cols, timestamp_input
-                )
+
+                # Tambahkan kolom timestamp dan sesi ke DataFrame
+                df_final["timestamp_input_data"] = timestamp_input
+                df_final["sesi"] = selected_sesi  # Menggunakan nilai dari selectbox
+
+                # Lanjutkan dengan proses penyimpanan data ke database...
+                # db_manager.save_data(df_final)
+                st.success("Data berhasil diproses dan disimpan!")
+                st.write(df_final.head())
 
                 st.markdown("""---""")
 

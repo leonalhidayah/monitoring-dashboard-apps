@@ -55,7 +55,6 @@ def get_table_data(table_name: str, order_by_column: str = None) -> pd.DataFrame
             logging.info(f"Koneksi database untuk mengambil data {table_name} ditutup.")
 
 
-
 def get_dim_marketplaces():
     """Mengambil semua data dari tabel dim_marketplaces."""
     return get_table_data(
@@ -92,27 +91,31 @@ def get_dim_shipping_services():
 
 def get_dim_payment_methods():
     """Mengambil semua data dari tabel dim_payment_methods."""
-    return get_table_data(
-        table_name="dim_payment_methods"
-    )
-    
+    return get_table_data(table_name="dim_payment_methods")
+
+
 def get_shipments():
     """Mengambil semua data dari tabel shipments."""
-    return get_table_data(
-        table_name="shipments"
-    )
-    
+    return get_table_data(table_name="shipments")
+
+
 def get_orders():
     """Mengambil semua data dari tabel orders."""
     return get_table_data(table_name="orders")
+
 
 def get_order_items():
     """Mengambil semua data dari tabel order_items."""
     return get_table_data(table_name="order_items")
 
+
 def get_admin_shipments():
     """Mengambil semua data dari tabel admin_shipments."""
     return get_table_data(table_name="admin_shipments")
+
+
+def get_finance_omset():
+    return get_table_data(table_name="finance_omset")
 
 
 # --- ADVERTISER DATA ---

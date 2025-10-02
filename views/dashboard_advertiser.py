@@ -222,6 +222,7 @@ st.dataframe(
     hide_index=True,
 )
 
+
 st.subheader("Gross Revenue vs Spend Over Time")
 time_series_data = df_filtered.groupby("tanggal")[["gross_revenue", "spend"]].sum()
 st.line_chart(time_series_data)

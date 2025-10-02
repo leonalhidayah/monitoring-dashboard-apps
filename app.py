@@ -35,6 +35,12 @@ admin_dashboard_page = st.Page(
     icon=":material/analytics:",
 )
 
+finance_dashboard_page = st.Page(
+    "views/dashboard_finance.py",
+    title="Finance Dashboard",
+    icon=":material/analytics:",
+)
+
 # MENU
 entry_advertiser_page = st.Page(
     "views/data_entry_advertiser.py", title="Advertiser", icon=":material/campaign:"
@@ -70,7 +76,11 @@ PAGE_MAPPING = {
 
 SUPERUSER_PAGES = {
     "Home": [home_page],
-    "Dashboards": [advertiser_dashboard_page, admin_dashboard_page],
+    "Dashboards": [
+        advertiser_dashboard_page,
+        admin_dashboard_page,
+        finance_dashboard_page,
+    ],
     "Data Entry": [
         entry_admin_page,
         entry_finance_page,
