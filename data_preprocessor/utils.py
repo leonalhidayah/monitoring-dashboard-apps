@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 project_root = Path().cwd().parent
@@ -35,7 +35,7 @@ ZYY_STORE_LIST = [
 
 JH_STORE_LIST = [
     "SP juwara herbal official store",
-    "TT juwara herbal",
+    "TT juwaraherbal",
 ]
 
 ENZ_STORE_LIST = [
@@ -74,7 +74,12 @@ KDK_STORE_LIST = [
     "LZ kudaku",
 ]
 
-TOKO_BANDUNG = ["SP zhi yang yao official", "SP erassgo bandung"]
+TOKO_BANDUNG = [
+    "SP zhi yang yao official",
+    "SP erassgo bandung",
+    "SP juwara herbal official store",
+    "TT juwara herbal",
+]
 MARKETPLACE_LIST = ["Lazada", "Shopee", "TikTok", "Tokopedia"]
 BRAND_LIST = ["Zhi Yang Yao", "Enzhico", "Erassgo"]
 AKUN_LIST = [
@@ -791,3 +796,211 @@ def generate_excel_bytes(df, group_cols, value_col, aggfunc="sum"):
     # Pindahkan "cursor" buffer ke awal
     buffer.seek(0)
     return buffer
+
+
+def expand_sku(sku: str):
+    """
+    Expand SKU bundling sesuai aturan:
+    - Jika tidak ada "_", return [sku]
+    - Jika ada "_", pecah jadi beberapa produk
+    """
+    if "_" not in sku:
+        return [sku]
+
+    parts = sku.split("_")
+    prefix = parts[0].split("-")[0]  # ambil brand prefix (3 huruf pertama sebelum '-')
+
+    expanded = [parts[0]]  # produk pertama utuh
+    for p in parts[1:]:
+        expanded.append(prefix + "-" + p)
+
+    return expanded
+
+
+def create_visual_report(report_df, original_df):
+    """
+    Membuat laporan Excel yang lebih mudah dibaca secara visual
+    dengan warna, border, subtotal, dan grand total.
+    """
+    if report_df.empty:
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Laporan Marketplace"
+        ws["A1"] = "Tidak ada data untuk ditampilkan."
+        output = io.BytesIO()
+        wb.save(output)
+        return output.getvalue()
+
+    # Urutkan data
+    df_sorted = report_df.sort_values(
+        by=["nama_marketplace", "nama_toko", "sku"]
+    ).reset_index(drop=True)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Laporan Marketplace"
+
+    # --- Styles ---
+    bold_font = Font(bold=True)
+    italic_bold_font = Font(bold=True, italic=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    right_align = Alignment(horizontal="right", vertical="center")
+
+    header_fill = PatternFill(
+        start_color="BDD7EE", end_color="BDD7EE", fill_type="solid"
+    )
+    subtotal_fill = PatternFill(
+        start_color="FFF2CC", end_color="FFF2CC", fill_type="solid"
+    )
+    marketplace_fill = PatternFill(
+        start_color="FCE4D6", end_color="FCE4D6", fill_type="solid"
+    )
+    total_fill = PatternFill(
+        start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"
+    )
+
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    # --- Header ---
+    headers = [
+        "Marketplace",
+        "Nama Toko",
+        "SKU",
+        "Jumlah PCS",
+        "Total Resi Unik Marketplace",
+    ]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = bold_font
+        cell.alignment = center_align
+        cell.fill = header_fill
+        cell.border = thin_border
+
+    # --- Variabel Pelacak ---
+    marketplace_start_row, toko_start_row = 2, 2
+    marketplace_pcs_subtotal, toko_pcs_subtotal = 0, 0
+    prev_marketplace, prev_toko = None, None
+
+    # --- Iterasi Data ---
+    for idx, row in df_sorted.iterrows():
+        current_row_num = ws.max_row + 1
+        if prev_marketplace is None:
+            prev_marketplace = row["nama_marketplace"]
+            prev_toko = row["nama_toko"]
+
+        # Marketplace berubah
+        if row["nama_marketplace"] != prev_marketplace:
+            # Subtotal toko terakhir
+            ws.append(["", f"Subtotal {prev_toko}", "", toko_pcs_subtotal, ""])
+            for cell in ws[ws.max_row]:
+                cell.font = italic_bold_font
+                cell.fill = subtotal_fill
+                cell.border = thin_border
+
+            # Subtotal marketplace
+            ws.append(
+                [
+                    "",
+                    f"SUBTOTAL {prev_marketplace}",
+                    "",
+                    marketplace_pcs_subtotal,
+                    df_sorted.loc[idx - 1, "jumlah_resi_unik"],
+                ]
+            )
+            for cell in ws[ws.max_row]:
+                cell.font = bold_font
+                cell.fill = marketplace_fill
+                cell.border = thin_border
+
+            ws.append([])  # baris kosong
+
+            # Reset
+            marketplace_pcs_subtotal, toko_pcs_subtotal = 0, 0
+            prev_marketplace, prev_toko = row["nama_marketplace"], row["nama_toko"]
+
+        # Toko berubah
+        elif row["nama_toko"] != prev_toko:
+            ws.append(["", f"Subtotal {prev_toko}", "", toko_pcs_subtotal, ""])
+            for cell in ws[ws.max_row]:
+                cell.font = italic_bold_font
+                cell.fill = subtotal_fill
+                cell.border = thin_border
+
+            ws.append([])  # baris kosong antar toko
+
+            toko_pcs_subtotal = 0
+            prev_toko = row["nama_toko"]
+
+        # Tulis data SKU
+        ws.append(
+            [
+                row["nama_marketplace"],
+                row["nama_toko"],
+                row["sku"],
+                row["jumlah_pcs"],
+                "",
+            ]
+        )
+        for cell in ws[ws.max_row]:
+            cell.border = thin_border
+        ws[ws.max_row][3].alignment = right_align
+
+        marketplace_pcs_subtotal += row["jumlah_pcs"]
+        toko_pcs_subtotal += row["jumlah_pcs"]
+
+    # --- Akhiri dengan subtotal terakhir ---
+    ws.append(["", f"Subtotal {prev_toko}", "", toko_pcs_subtotal, ""])
+    for cell in ws[ws.max_row]:
+        cell.font = italic_bold_font
+        cell.fill = subtotal_fill
+        cell.border = thin_border
+
+    ws.append(
+        [
+            "",
+            f"SUBTOTAL {prev_marketplace}",
+            "",
+            marketplace_pcs_subtotal,
+            df_sorted.iloc[-1]["jumlah_resi_unik"],
+        ]
+    )
+    for cell in ws[ws.max_row]:
+        cell.font = bold_font
+        cell.fill = marketplace_fill
+        cell.border = thin_border
+
+    ws.append([])
+
+    # --- Grand Total ---
+    grand_total_pcs = df_sorted["jumlah_pcs"].sum()
+    grand_total_resi_unik = original_df["no_resi"].nunique()
+    ws.append(["GRAND TOTAL", "", "", grand_total_pcs, grand_total_resi_unik])
+    for cell in ws[ws.max_row]:
+        cell.font = bold_font
+        cell.fill = total_fill
+        cell.border = thin_border
+
+    ws.merge_cells(
+        start_row=ws.max_row, start_column=1, end_row=ws.max_row, end_column=2
+    )
+
+    # --- Auto Width Columns ---
+    for col in ws.columns:
+        max_length = 0
+        column_letter = get_column_letter(col[0].column)
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        ws.column_dimensions[column_letter].width = max_length + 2
+
+    output = io.BytesIO()
+    wb.save(output)
+    return output.getvalue()

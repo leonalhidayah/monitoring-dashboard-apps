@@ -107,63 +107,144 @@ with bar_sku:
     else:
         st.warning("Tidak ada data untuk ditampilkan dengan filter yang dipilih.")
 
+# Terapkan fungsi ke seluruh sku
+df_expanded = df_filtered.assign(
+    sku=df_filtered["sku"].apply(utils.expand_sku)
+).explode("sku")
+
+# Ulangi jumlah sesuai banyaknya hasil expand
+df_expanded["jumlah_item"] = (
+    df["jumlah_item"]
+    .repeat(df["sku"].apply(utils.expand_sku).str.len())
+    .reset_index(drop=True)
+)
+
+df_expanded.reset_index(drop=True, inplace=True)
+
 # Menampilkan data mentah (opsional)
 if st.checkbox("Tampilkan Data Mentah Hasil Filter"):
-    if not df_filtered.empty:
-        st.write(df_filtered.reset_index(drop=True))
+    if not df_expanded.empty:
+        st.write(df_expanded)
     else:
         st.info("Tidak ada data mentah untuk ditampilkan.")
 
-st.subheader("Pengen Buat Laporan? Sini sini")
-col1, col2 = st.columns(2)  # Buat 2 kolom agar rapi
+# st.subheader("Pengen Buat Laporan? Sini sini")
+# col1, col2 = st.columns(2)  # Buat 2 kolom agar rapi
 
-grouping_cols = ["nama_brand", "sku"]
-available_value_cols = ["jumlah_item", "no_resi", "order_id"]
+# # --- KONFIGURASI LAPORAN ---
+# st.subheader("⚙️ Konfigurasi Laporan")
 
-with col1:
-    selected_value_col = st.selectbox(
-        "Pilih data yang ingin dihitung:",
-        options=available_value_cols,
-        help="Pilih kolom numerik atau ID yang ingin Anda agregasi.",
-    )
+# # 1. Widget BARU untuk memilih tipe laporan
+# report_options = {
+#     "Report Gudang": ["nama_brand", "sku"],
+#     "Report Tim Marketplace": ["nama_toko", "sku"],
+# }
+# selected_report_type = st.selectbox(
+#     "Pilih Tipe Laporan:",
+#     options=list(report_options.keys()),
+#     help="Pilihan ini akan menentukan kolom pengelompokan (grouping) yang digunakan.",
+# )
 
-# Logika untuk menentukan pilihan agregasi tetap sama
-if selected_value_col == "jumlah_item":
-    agg_options = {
-        "Jumlah Total (Sum)": "sum",
-        "Rata-rata (Mean)": "mean",
-        "Jumlah Transaksi (Count)": "count",
-    }
-else:
-    agg_options = {
-        "Hitung Item Unik (Nunique)": "nunique",
-        "Hitung Semua Item (Count)": "count",
-    }
+# # 2. Secara dinamis menentukan kolom group berdasarkan pilihan tipe laporan
+# grouping_cols = report_options[selected_report_type]
 
-with col2:
-    selected_agg_display = st.selectbox(
-        "Pilih metode kalkulasi:",
-        options=list(agg_options.keys()),
-        help="Metode akan disesuaikan berdasarkan tipe data yang Anda pilih.",
-    )
-selected_aggfunc = agg_options[selected_agg_display]
+# # Beri feedback ke pengguna tentang kolom yang digunakan
+# st.info(f"Laporan akan dikelompokkan berdasarkan: **{', '.join(grouping_cols)}**.")
 
-if st.button("Buat Laporan", use_container_width=True, type="primary"):
-    with st.spinner("Mohon tunggu, laporan sedang dibuat..."):
-        excel_bytes = utils.generate_excel_bytes(
-            df=df_filtered,
-            group_cols=grouping_cols,
-            value_col=selected_value_col,
-            aggfunc=selected_aggfunc,
+# # --- Lanjutan Konfigurasi (Value dan Agregasi) ---
+# available_value_cols = ["jumlah_item", "no_resi", "order_id"]
+# col1, col2 = st.columns(2)
+
+# with col1:
+#     selected_value_col = st.selectbox(
+#         "Pilih data yang ingin dihitung:",
+#         options=available_value_cols,
+#         help="Pilih kolom numerik atau ID yang ingin Anda agregasi.",
+#     )
+
+# # Logika untuk menentukan pilihan agregasi tetap sama
+# if selected_value_col == "jumlah_item":
+#     agg_options = {
+#         "Jumlah Total (Sum)": "sum",
+#         "Rata-rata (Mean)": "mean",
+#         "Jumlah Transaksi (Count)": "count",
+#     }
+# else:
+#     agg_options = {
+#         "Hitung Item Unik (Nunique)": "nunique",
+#         "Hitung Semua Item (Count)": "count",
+#     }
+
+# with col2:
+#     selected_agg_display = st.selectbox(
+#         "Pilih metode kalkulasi:",
+#         options=list(agg_options.keys()),
+#         help="Metode akan disesuaikan berdasarkan tipe data yang Anda pilih.",
+#     )
+# selected_aggfunc = agg_options[selected_agg_display]
+
+
+# # --- Tombol Generate Laporan ---
+# if st.button("Buat Laporan", use_container_width=True, type="primary"):
+#     with st.spinner("Mohon tunggu, laporan sedang dibuat..."):
+#         excel_bytes = utils.generate_excel_bytes(
+#             df=df_filtered,
+#             group_cols=grouping_cols,  # Menggunakan variabel dinamis
+#             value_col=selected_value_col,
+#             aggfunc=selected_aggfunc,
+#         )
+
+#     st.success("Laporan Siap Diunduh!")
+
+#     # Membuat nama file lebih deskriptif
+#     report_type_slug = selected_report_type.replace(" ", "_").lower()
+#     file_name = f"{report_type_slug}_{selected_value_col}_by_{selected_aggfunc}_{pd.Timestamp.now():%Y%m%d_%H%M}.xlsx"
+
+#     st.download_button(
+#         label="**Download Laporan Excel**",
+#         data=excel_bytes,
+#         file_name=file_name,
+#         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+#         use_container_width=True,
+#     )
+
+report_detail_pcs = (
+    df_expanded.groupby(["nama_marketplace", "nama_toko", "sku"])
+    .agg(jumlah_pcs=("jumlah_item", "sum"))
+    .reset_index()
+)
+
+report_rangkuman_resi = (
+    df_expanded.groupby("nama_marketplace")
+    .agg(jumlah_resi_unik=("no_resi", "nunique"))
+    .reset_index()
+)
+
+report_final = pd.merge(
+    left=report_detail_pcs,
+    right=report_rangkuman_resi,
+    on="nama_marketplace",
+    how="left",  # Gunakan left join untuk memastikan semua baris dari report_detail_pcs tetap ada
+)
+
+st.subheader("Buat Laporan Excel")
+
+if st.button("Buat Laporan Excel", use_container_width=True, type="primary"):
+    with st.spinner("Mohon tunggu, laporan Excel sedang dibuat..."):
+        # Panggil fungsi baru kita
+        # Kita butuh report_final (untuk detail) dan df_expanded (untuk grand total resi)
+        excel_bytes = utils.create_visual_report(
+            report_df=report_final, original_df=df_expanded
         )
 
-        st.success("Laporan Siap Diunduh!")
-        file_name = f"report_{selected_value_col}_by_{selected_aggfunc}_{pd.Timestamp.now()}.xlsx"
+    st.success("Laporan Excel Siap Diunduh!")
 
-        st.download_button(
-            label="**Download Laporan Excel**",
-            data=excel_bytes,
-            file_name=file_name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
+    file_name = f"Report_Marketplace_{pd.Timestamp.now():%Y%m%d_%H%M}.xlsx"
+
+    st.download_button(
+        label="**Download Laporan Excel**",
+        data=excel_bytes,
+        file_name=file_name,
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )

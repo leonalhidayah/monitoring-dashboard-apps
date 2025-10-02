@@ -59,7 +59,7 @@ with marketplace_tab:
             ],
             "Nama Toko": [
                 "SP juwara herbal official store",
-                "TT juwara herbal",
+                "TT juwaraherbal",
             ],
         },
         "Enzhico": {

@@ -37,17 +37,14 @@ def get_quarter_months(month: int):
         return ["October", "November", "December"], 4
 
 
-plan_tab, profit_tab, omset_tab, budget_ads_tab, budget_non_ads_tab, cashflow_tab = (
-    st.tabs(
-        [
-            "Budget Plan",
-            "Estimasi Profit",
-            "Omset",
-            "Budegt Ads",
-            "Budget Non Ads",
-            "Cashflow",
-        ]
-    )
+plan_tab, omset_tab, budget_ads_tab, budget_non_ads_tab, cashflow_tab = st.tabs(
+    [
+        "Budget Plan",
+        "Omset",
+        "Budegt Ads",
+        "Budget Non Ads",
+        "Cashflow",
+    ]
 )
 
 with plan_tab:
@@ -206,7 +203,7 @@ data = {
         ],
         "Nama Toko": [
             "SP juwara herbal official store",
-            "TT juwara herbal",
+            "TT juwaraherbal",
         ],
     },
     "Enzhico": {

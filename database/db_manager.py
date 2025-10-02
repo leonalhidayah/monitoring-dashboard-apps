@@ -118,6 +118,14 @@ def get_finance_omset():
     return get_table_data(table_name="finance_omset")
 
 
+def get_finance_budget_ads():
+    return get_table_data(table_name="finance_budget_ads")
+
+
+def get_finance_budget_non_ads():
+    return get_table_data(table_name="finance_budget_non_ads")
+
+
 # --- ADVERTISER DATA ---
 # --- marketplace
 def insert_advertiser_marketplace_data(data: pd.DataFrame):
