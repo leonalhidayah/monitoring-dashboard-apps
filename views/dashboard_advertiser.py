@@ -19,7 +19,7 @@ def format_number(num):
 # --- MEMUAT DAN MEMPROSES DATA ---
 df = db_manager.get_advertiser_marketplace_data()
 
-data_pemetaan_brand = {
+data_pemetaan_project = {
     "Zhi Yang Yao": {
         "Nama Toko": [
             "SP zhi yang yao official store",
@@ -32,6 +32,12 @@ data_pemetaan_brand = {
             "TT zhi yang yao official store",
             "LZ zhi yang yao",
         ]
+    },
+    "Juwara Herbal": {
+        "Nama Toko": [
+            "SP juwara herbal official store",
+            "TT juwara herbal",
+        ],
     },
     "Enzhico": {
         "Nama Toko": [
@@ -54,11 +60,22 @@ data_pemetaan_brand = {
             "LZ erassgo store id",
         ]
     },
+    "Kudaku": {
+        "Nama Toko": [
+            "SP kudaku",
+            "SP kudaku store",
+            "SP kudaku official store",
+            "SP kudaku id",
+            "SP kudaku indonesia",
+            "TT kudaku milk",
+            "LZ kudaku",
+        ],
+    },
 }
 
 store_to_brand_map = {
     store: brand
-    for brand, details in data_pemetaan_brand.items()
+    for brand, details in data_pemetaan_project.items()
     for store in details["Nama Toko"]
 }
 
@@ -157,7 +174,6 @@ st.dataframe(
     hide_index=True,
 )
 
-st.markdown("---")
 chart1, chart2 = st.columns(2)
 with chart1:
     st.subheader("Spend by Brand")
@@ -167,6 +183,44 @@ with chart2:
     st.bar_chart(
         brand_performance.set_index("brand")[["gross_revenue"]], horizontal=True
     )
+
+
+st.markdown("---")
+# store performance
+st.subheader("Store Performance Detail")
+store_performance = (
+    df_filtered.groupby("nama_toko")
+    .agg(
+        {
+            "spend": "sum",
+            "gross_revenue": "sum",
+            "konversi": "sum",
+            "produk_terjual": "sum",
+        }
+    )
+    .reset_index()
+)
+
+store_performance["ROAS"] = (
+    store_performance["gross_revenue"] / store_performance["spend"]
+)
+store_performance["CPA"] = store_performance["spend"] / store_performance["konversi"]
+store_performance = store_performance.sort_values(by="gross_revenue", ascending=False)
+
+st.dataframe(
+    store_performance.style.format(
+        {
+            "spend": "Rp{:,.0f}",
+            "gross_revenue": "Rp{:,.0f}",
+            "konversi": "{:,.0f}",
+            "produk_terjual": "{:,.0f}",
+            "ROAS": "{:.2f}",
+            "CPA": "Rp{:,.0f}",
+        }
+    ).bar(subset=["ROAS", "gross_revenue"], color="#649c4f", vmin=0),
+    width="stretch",
+    hide_index=True,
+)
 
 st.subheader("Gross Revenue vs Spend Over Time")
 time_series_data = df_filtered.groupby("tanggal")[["gross_revenue", "spend"]].sum()

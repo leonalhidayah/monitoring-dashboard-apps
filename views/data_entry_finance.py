@@ -37,8 +37,17 @@ def get_quarter_months(month: int):
         return ["October", "November", "December"], 4
 
 
-plan_tab, omset_tab, budget_ads_tab, budget_non_ads_tab, cashflow_tab = st.tabs(
-    ["Budget Plan", "Omset", "Budegt Ads", "Budget Non Ads", "Cashflow"]
+plan_tab, aktual_tab, omset_tab, budget_ads_tab, budget_non_ads_tab, cashflow_tab = (
+    st.tabs(
+        [
+            "Budget Plan",
+            "Aktualisasi",
+            "Omset",
+            "Budegt Ads",
+            "Budget Non Ads",
+            "Cashflow",
+        ]
+    )
 )
 
 with plan_tab:
@@ -147,6 +156,9 @@ with plan_tab:
                 st.success("✅ Budget Plan berhasil disimpan ke database!")
             except Exception as e:
                 st.error(f"Gagal menyimpan ke database: {e}")
+
+
+# with aktual_tab:
 
 
 # Definisikan data toko untuk setiap brand
