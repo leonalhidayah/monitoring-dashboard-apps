@@ -73,15 +73,15 @@ data_pemetaan_project = {
     },
 }
 
-store_to_brand_map = {
-    store: brand
-    for brand, details in data_pemetaan_project.items()
+store_to_project_map = {
+    store: project
+    for project, details in data_pemetaan_project.items()
     for store in details["Nama Toko"]
 }
 
-df["brand"] = df["nama_toko"].map(store_to_brand_map)
+df["project"] = df["nama_toko"].map(store_to_project_map)
 df["tanggal"] = pd.to_datetime(df["tanggal"]).dt.date
-df.dropna(subset=["brand"], inplace=True)  # Hapus baris tanpa brand
+df.dropna(subset=["project"], inplace=True)  # Hapus baris tanpa project
 
 # --- TAMPILAN UTAMA & FILTER ---
 st.title("📊 Report Iklan Marketplace")
@@ -89,9 +89,9 @@ st.markdown("---")
 
 filter1, filter2 = st.columns(2)
 with filter1:
-    unique_brands = df["brand"].unique()
-    selected_brands = st.multiselect(
-        "Brand", options=unique_brands, default=unique_brands
+    unique_projects = df["project"].unique()
+    selected_projects = st.multiselect(
+        "Project", options=unique_projects, default=unique_projects
     )
 
 with filter2:
@@ -111,7 +111,7 @@ if len(date_range) != 2:
 
 start_date, end_date = date_range
 df_filtered = df[
-    (df["brand"].isin(selected_brands))
+    (df["project"].isin(selected_projects))
     & (df["tanggal"] >= start_date)
     & (df["tanggal"] <= end_date)
 ]
@@ -139,9 +139,9 @@ kpi6.metric("CPA", value=format_number(overall_cpa))
 st.markdown("---")
 
 # --- TABEL & GRAFIK ---
-st.subheader("Brand Performance Detail")
-brand_performance = (
-    df_filtered.groupby("brand")
+st.subheader("Project Performance Detail")
+project_performance = (
+    df_filtered.groupby("project")
     .agg(
         {
             "spend": "sum",
@@ -153,14 +153,18 @@ brand_performance = (
     .reset_index()
 )
 
-brand_performance["ROAS"] = (
-    brand_performance["gross_revenue"] / brand_performance["spend"]
+project_performance["ROAS"] = (
+    project_performance["gross_revenue"] / project_performance["spend"]
 )
-brand_performance["CPA"] = brand_performance["spend"] / brand_performance["konversi"]
-brand_performance = brand_performance.sort_values(by="gross_revenue", ascending=False)
+project_performance["CPA"] = (
+    project_performance["spend"] / project_performance["konversi"]
+)
+project_performance = project_performance.sort_values(
+    by="gross_revenue", ascending=False
+)
 
 st.dataframe(
-    brand_performance.style.format(
+    project_performance.style.format(
         {
             "spend": "Rp{:,.0f}",
             "gross_revenue": "Rp{:,.0f}",
@@ -176,12 +180,12 @@ st.dataframe(
 
 chart1, chart2 = st.columns(2)
 with chart1:
-    st.subheader("Spend by Brand")
-    st.bar_chart(brand_performance.set_index("brand")[["spend"]], horizontal=True)
+    st.subheader("Spend by project")
+    st.bar_chart(project_performance.set_index("project")[["spend"]], horizontal=True)
 with chart2:
-    st.subheader("Gross Revenue by Brand")
+    st.subheader("Gross Revenue by project")
     st.bar_chart(
-        brand_performance.set_index("brand")[["gross_revenue"]], horizontal=True
+        project_performance.set_index("project")[["gross_revenue"]], horizontal=True
     )
 
 

@@ -126,6 +126,11 @@ def get_finance_budget_non_ads():
     return get_table_data(table_name="finance_budget_non_ads")
 
 
+def get_vw_budget_ads_monitoring():
+    """Mengambil semua data dari tabel vw_budget_ads_monitoring."""
+    return get_table_data(table_name="vw_budget_ads_monitoring")
+
+
 # --- ADVERTISER DATA ---
 # --- marketplace
 def insert_advertiser_marketplace_data(data: pd.DataFrame):
@@ -637,14 +642,13 @@ def insert_budget_ads_data(data: pd.DataFrame):
 
         query = """
             INSERT INTO finance_budget_ads (
-                tanggal, marketplace, nama_toko, nominal_budget_ads,
+                tanggal, marketplace, nama_toko,
                 nominal_aktual_ads
             ) VALUES (
-                %s, %s, %s, %s, %s
+                %s, %s, %s, %s
             )
             ON CONFLICT (tanggal, nama_toko) DO UPDATE SET
                 marketplace = EXCLUDED.marketplace,
-                nominal_budget_ads = EXCLUDED.nominal_budget_ads,
                 nominal_aktual_ads = EXCLUDED.nominal_aktual_ads;
         """
 
@@ -655,7 +659,6 @@ def insert_budget_ads_data(data: pd.DataFrame):
                     "Tanggal",
                     "Marketplace",
                     "Nama Toko",
-                    "Nominal Budget Ads",
                     "Nominal Aktual Ads",
                 ]
             ].to_numpy()
@@ -695,9 +698,9 @@ def insert_budget_non_ads_data(data: pd.DataFrame):
 
         query = """
             INSERT INTO finance_budget_non_ads (
-                tanggal, nominal_budget_non_ads, nominal_aktual_non_ads, keterangan
+                tanggal, nominal_aktual_non_ads, keterangan
             ) VALUES (
-                %s, %s, %s, %s
+                %s, %s, %s
             );
         """
 
@@ -706,7 +709,6 @@ def insert_budget_non_ads_data(data: pd.DataFrame):
             for row in data[
                 [
                     "Tanggal",
-                    "Nominal Budget Non Ads",
                     "Nominal Aktual Non Ads",
                     "Keterangan",
                 ]

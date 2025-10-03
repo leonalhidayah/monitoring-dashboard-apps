@@ -429,7 +429,7 @@ def initialize_ads_data_session(project_name, marketplace_list, store_list):
             ),
             "Marketplace": marketplace_list,
             "Nama Toko": store_list,
-            "Nominal Budget Ads": [0.0] * len(store_list),
+            # "Nominal Budget Ads": [0.0] * len(store_list),
             "Nominal Aktual Ads": None,
         }
         st.session_state[session_key] = pd.DataFrame(data)
@@ -458,12 +458,12 @@ def get_ads_column_config(project_name):
             options=store_list,
             required=True,
         ),
-        "Nominal Budget Ads": st.column_config.NumberColumn(
-            "Nominal Budget Ads (Rp)",
-            min_value=0.0,
-            format="accounting",
-            required=True,
-        ),
+        # "Nominal Budget Ads": st.column_config.NumberColumn(
+        #     "Nominal Budget Ads (Rp)",
+        #     min_value=0.0,
+        #     format="accounting",
+        #     required=True,
+        # ),
         "Nominal Aktual Ads": st.column_config.NumberColumn(
             "Nominal Aktual Ads (Rp)",
             min_value=0.0,
@@ -543,7 +543,6 @@ def initialize_non_ads_data_session(branch_name):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(pd.Timestamp.today().date(), index=range(5)),
-            "Nominal Budget Non Ads": [0.0] * 5,
             "Nominal Aktual Non Ads": None,
             "Keterangan": None,
         }
@@ -559,12 +558,6 @@ def get_non_ads_column_config():
             "Tanggal",
             min_value=pd.Timestamp(2023, 1, 1),
             format="YYYY-MM-DD",
-            required=True,
-        ),
-        "Nominal Budget Non Ads": st.column_config.NumberColumn(
-            "Nominal Budget Non Ads (Rp)",
-            min_value=0.0,
-            format="accounting",
             required=True,
         ),
         "Nominal Aktual Non Ads": st.column_config.NumberColumn(

@@ -1,10 +1,14 @@
 from datetime import datetime
+from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
 from database import db_manager
 from database.db_connection import get_connection
+
+project_root = Path.cwd()
 
 
 def get_quarter_months(month: int):
@@ -45,7 +49,16 @@ total_omset = df_omset["total_omset"].iloc[0]
 st.markdown(f"**Total Omset Aktualisasi:** Rp {total_omset:,.0f}")
 st.markdown(f"**Total Omset Bulanan (per bulan):** Rp {(total_omset / 3):,.0f}")
 
-st.dataframe(db_manager.get_finance_omset())
-
-st.dataframe(db_manager.get_finance_budget_ads())
-st.dataframe(db_manager.get_finance_budget_non_ads())
+df_monitoring_budget_ads = db_manager.get_vw_budget_ads_monitoring()
+df_monitoring_budget_ads["nominal_aktual_ads"].fillna(0, inplace=True)
+df_monitoring_budget_ads["status"] = np.where(
+    df_monitoring_budget_ads["nominal_aktual_ads"]
+    <= df_monitoring_budget_ads["nominal_budget_ads"],
+    "Normal",
+    "Over",
+)
+df_project = pd.read_csv(project_root / "data_preprocessor" / "project_mapping.csv")
+df_monitoring_budget_ads = df_monitoring_budget_ads.merge(
+    df_project, how="inner", on="nama_toko"
+)
+st.dataframe(df_monitoring_budget_ads)
