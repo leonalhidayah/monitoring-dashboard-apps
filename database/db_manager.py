@@ -131,6 +131,11 @@ def get_vw_budget_ads_monitoring():
     return get_table_data(table_name="vw_budget_ads_monitoring")
 
 
+def get_payments():
+    """Mengambil semua data dari tabel payments."""
+    return get_table_data(table_name="payments")
+
+
 # --- ADVERTISER DATA ---
 # --- marketplace
 def insert_advertiser_marketplace_data(data: pd.DataFrame):

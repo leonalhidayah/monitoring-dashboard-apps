@@ -86,6 +86,7 @@ AKUN_LIST = [
     "Zhi yang yao mall 1",
     "Zhi yang yao CPAS 03",
     "Zhi yang yao CPAS",
+    "Zhi yang yao CPAS Tokopedia",
     "Erassgo CPAS 1",
     "Erassgo mall 1",
     "Enzhico CPAS 1",

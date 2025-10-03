@@ -62,3 +62,10 @@ df_monitoring_budget_ads = df_monitoring_budget_ads.merge(
     df_project, how="inner", on="nama_toko"
 )
 st.dataframe(df_monitoring_budget_ads)
+
+df_payments = db_manager.get_payments()
+st.dataframe(df_payments)
+
+st.metric(
+    label="Estimasi Omset dari Total Pesanan", value=df_payments["total_pesanan"].sum()
+)
