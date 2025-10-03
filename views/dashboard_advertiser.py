@@ -29,7 +29,7 @@ data_pemetaan_project = {
             "SP zhi yang yao (iklan eksternal FB)",
             "TP zhi yang yao official store",
             "TP zhi yang yao",
-            "TT zhi yang yao official store",
+            "TT zhi yang yao",
             "LZ zhi yang yao",
         ]
     },

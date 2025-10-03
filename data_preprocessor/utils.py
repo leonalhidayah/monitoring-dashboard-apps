@@ -1,6 +1,6 @@
 import io
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -588,7 +588,8 @@ def initialize_marketplace_data_session(project_name, marketplace_list, store_li
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                pd.Timestamp.today().date(), index=range(len(store_list))
+                pd.Timestamp.today().date() - timedelta(days=1),
+                index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
             "Nama Toko": store_list,
@@ -663,7 +664,8 @@ def initialize_cpas_data_session(project_name, store_list, akun_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                pd.Timestamp.today().date(), index=range(len(akun_list))
+                pd.Timestamp.today().date() - timedelta(days=1),
+                index=range(len(akun_list)),
             ),
             "Nama Toko": store_list,
             "Akun": akun_list,
