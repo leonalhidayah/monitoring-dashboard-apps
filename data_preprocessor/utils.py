@@ -5,12 +5,17 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytz
 import streamlit as st
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 project_root = Path().cwd().parent
+
+jakarta_tz = pytz.timezone("Asia/Jakarta")
+now_in_jakarta = datetime.now(jakarta_tz)
+yesterday_in_jakarta = now_in_jakarta - timedelta(days=1)
 
 # GLOBAL VARIABLE
 # ZYY_STORE_LIST = [
@@ -363,7 +368,7 @@ def initialize_omset_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                pd.Timestamp.today().date() - timedelta(days=1),
+                yesterday_in_jakarta,
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -429,7 +434,7 @@ def initialize_ads_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                pd.Timestamp.today().date() - timedelta(days=1),
+                yesterday_in_jakarta,
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -480,9 +485,7 @@ def initialize_stock_data_session():
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(
-                pd.Timestamp.today().date() - timedelta(days=1), index=range(5)
-            ),
+            "Tanggal": pd.Series(yesterday_in_jakarta, index=range(5)),
             "Marketplace": None,
             "Nama Toko": None,
             "Nominal Budget Ads": [0.0] * 5,
@@ -541,9 +544,7 @@ def initialize_non_ads_data_session(branch_name):
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(
-                pd.Timestamp.today().date() - timedelta(days=1), index=range(5)
-            ),
+            "Tanggal": pd.Series(yesterday_in_jakarta, index=range(5)),
             "Nominal Aktual Non Ads": None,
             "Keterangan": None,
         }
@@ -588,7 +589,7 @@ def initialize_marketplace_data_session(project_name, marketplace_list, store_li
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                pd.Timestamp.today().date() - timedelta(days=1),
+                yesterday_in_jakarta,
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -664,7 +665,7 @@ def initialize_cpas_data_session(project_name, store_list, akun_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                pd.Timestamp.today().date() - timedelta(days=1),
+                yesterday_in_jakarta,
                 index=range(len(akun_list)),
             ),
             "Nama Toko": store_list,
