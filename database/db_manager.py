@@ -241,13 +241,13 @@ def insert_advertiser_cpas_data(data: pd.DataFrame):
         cur = conn.cursor()
 
         query = """
-            INSERT INTO advertiser_cpas (tanggal, nama_brand, akun, spend, konversi, gross_revenue)
+            INSERT INTO advertiser_cpas (tanggal, nama_toko, akun, spend, konversi, gross_revenue)
             VALUES (
                 %s, %s, %s, %s, %s, %s
             )
             ON CONFLICT (tanggal, akun) DO UPDATE
             SET
-                nama_brand = EXCLUDED.nama_brand,
+                nama_toko = EXCLUDED.nama_toko,
                 spend = EXCLUDED.spend,
                 konversi = EXCLUDED.konversi,
                 gross_revenue = EXCLUDED.gross_revenue;
@@ -257,7 +257,7 @@ def insert_advertiser_cpas_data(data: pd.DataFrame):
             for row in data[
                 [
                     "Tanggal",
-                    "Brand",
+                    "Nama Toko",
                     "Akun",
                     "Spend",
                     "Konversi",

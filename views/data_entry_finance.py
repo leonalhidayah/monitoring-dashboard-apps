@@ -200,7 +200,7 @@ data = {
             "SP zhi yang yao indonesia",
             "SP zhi yang yao mart",
             "SP zhi yang yao store",
-            "TT zhi yang yao official store",
+            "TT zhi yang yao",
             "LZ zhi yang yao",
             "LZ zhi yang yao id",
             "TP zhi yang yao official store",
@@ -253,6 +253,7 @@ data = {
             "Shopee",
             "Shopee",
             "Shopee",
+            "Shopee",
             "Tokopedia",
             "Lazada",
             "Lazada",
@@ -261,6 +262,7 @@ data = {
             "SP erassgo official",
             "SP erassgo official store",
             "SP erassgo.co",
+            "SP erassgo",
             "SP erassgo makassar",
             "TP erassgo",
             "LZ erassgo",
@@ -313,7 +315,9 @@ with omset_tab:
                     st.session_state[df_key],
                     num_rows="dynamic",
                     width="stretch",
-                    column_config=utils.get_omset_column_config(project_name),
+                    column_config=utils.get_omset_column_config(
+                        data[project_name]["Nama Toko"]
+                    ),
                 )
 
                 st.write("Tekan tombol di bawah untuk pratinjau dan menyimpan data.")
@@ -335,7 +339,9 @@ with omset_tab:
                     st.dataframe(
                         cleaned_df,
                         width="stretch",
-                        column_config=utils.get_omset_column_config(project_name),
+                        column_config=utils.get_omset_column_config(
+                            data[project_name]["Nama Toko"]
+                        ),
                     )
 
                     button_cols = st.columns([8, 10, 3])
@@ -391,7 +397,9 @@ with budget_ads_tab:
                         st.session_state[df_key],
                         num_rows="dynamic",
                         width="stretch",
-                        column_config=utils.get_ads_column_config(project_name),
+                        column_config=utils.get_ads_column_config(
+                            data[project_name]["Nama Toko"]
+                        ),
                     )
 
                     st.write(
@@ -417,7 +425,9 @@ with budget_ads_tab:
                         st.dataframe(
                             cleaned_df,
                             width="stretch",
-                            column_config=utils.get_ads_column_config(project_name),
+                            column_config=utils.get_ads_column_config(
+                                data[project_name]["Nama Toko"]
+                            ),
                         )
 
                         button_cols = st.columns([8, 10, 3])

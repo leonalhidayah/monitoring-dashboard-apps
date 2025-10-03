@@ -13,66 +13,66 @@ from openpyxl.utils import get_column_letter
 project_root = Path().cwd().parent
 
 # GLOBAL VARIABLE
-ZYY_STORE_LIST = [
-    "SP zhi yang yao official store",
-    "SP zhi yang yao",
-    "SP zhi yang yao (iklan eksternal FB)",
-    "SP zhi yang yao official",
-    "SP zhi yang yao id",
-    "SP zhi yang yao shop",
-    "SP zhi yang yao indonesia",
-    "SP zhi yang yao mart",
-    "SP zhi yang yao store",
-    "TT zhi yang yao official store",
-    "LZ zhi yang yao",
-    "LZ zhi yang yao id",
-    "LZ zhi yang yao store makasar",
-    "TP zhi yang yao official store",
-    "TP zhi yang yao",
-    "TP zhi yang yao store makassar",
-    "TP zhi yang yao official medan",
-]
+# ZYY_STORE_LIST = [
+#     "SP zhi yang yao official store",
+#     "SP zhi yang yao",
+#     "SP zhi yang yao (iklan eksternal FB)",
+#     "SP zhi yang yao official",
+#     "SP zhi yang yao id",
+#     "SP zhi yang yao shop",
+#     "SP zhi yang yao indonesia",
+#     "SP zhi yang yao mart",
+#     "SP zhi yang yao store",
+#     "TT zhi yang yao",
+#     "LZ zhi yang yao",
+#     "LZ zhi yang yao id",
+#     "LZ zhi yang yao store makasar",
+#     "TP zhi yang yao official store",
+#     "TP zhi yang yao",
+#     "TP zhi yang yao store makassar",
+#     "TP zhi yang yao official medan",
+# ]
 
-JH_STORE_LIST = [
-    "SP juwara herbal official store",
-    "TT juwaraherbal",
-]
+# JH_STORE_LIST = [
+#     "SP juwara herbal official store",
+#     "TT juwaraherbal",
+# ]
 
-ENZ_STORE_LIST = [
-    "SP enzhico",
-    "SP enzhico shop",
-    "SP enzhico store",
-    "SP enzhico store indonesia",
-    "SP enzhico shop indonesia",
-    "SP enzhico indonesia",
-    "SP enzhico authorize store",
-    "TT enzhico authorized store",
-    "LZ enzhico",
-    "LZ enzhico store",
-    "TP enzhico official store",
-]
+# ENZ_STORE_LIST = [
+#     "SP enzhico",
+#     "SP enzhico shop",
+#     "SP enzhico store",
+#     "SP enzhico store indonesia",
+#     "SP enzhico shop indonesia",
+#     "SP enzhico indonesia",
+#     "SP enzhico authorize store",
+#     "TT enzhico authorized store",
+#     "LZ enzhico",
+#     "LZ enzhico store",
+#     "TP enzhico official store",
+# ]
 
-ERA_STORE_LIST = [
-    "SP erassgo",
-    "SP erassgo bandung",
-    "SP erassgo official",
-    "SP erassgo official store",
-    "SP erassgo.co",
-    "SP erassgo makassar",
-    "TP erassgo",
-    "LZ erassgo",
-    "LZ erassgo store id",
-]
+# ERA_STORE_LIST = [
+#     "SP erassgo",
+#     "SP erassgo bandung",
+#     "SP erassgo official",
+#     "SP erassgo official store",
+#     "SP erassgo.co",
+#     "SP erassgo makassar",
+#     "TP erassgo",
+#     "LZ erassgo",
+#     "LZ erassgo store id",
+# ]
 
-KDK_STORE_LIST = [
-    "SP kudaku",
-    "SP kudaku store",
-    "SP kudaku official store",
-    "SP kudaku id",
-    "SP kudaku indonesia",
-    "TT kudaku milk",
-    "LZ kudaku",
-]
+# KDK_STORE_LIST = [
+#     "SP kudaku",
+#     "SP kudaku store",
+#     "SP kudaku official store",
+#     "SP kudaku id",
+#     "SP kudaku indonesia",
+#     "TT kudaku milk",
+#     "LZ kudaku",
+# ]
 
 TOKO_BANDUNG = [
     "SP zhi yang yao official",
@@ -82,30 +82,33 @@ TOKO_BANDUNG = [
 ]
 MARKETPLACE_LIST = ["Lazada", "Shopee", "TikTok", "Tokopedia"]
 BRAND_LIST = ["Zhi Yang Yao", "Enzhico", "Erassgo"]
-AKUN_LIST = [
-    "Zhi yang yao mall 1",
-    "Zhi yang yao CPAS 03",
-    "Zhi yang yao CPAS",
-    "Zhi yang yao CPAS Tokopedia",
-    "Erassgo CPAS 1",
-    "Erassgo mall 1",
-    "Enzhico CPAS 1",
-]
+# ZYY_AKUN_LIST = [
+#     "Zhi yang yao mall 1",
+#     "Zhi yang yao CPAS 03",
+#     "Zhi yang yao CPAS",
+#     "Zhi yang yao CPAS Tokopedia",
+# ]
+
+# ENZ_AKUN_LIST = [
+#     "Erassgo CPAS 1",
+#     "Erassgo mall 1",
+#     "Enzhico CPAS 1",
+# ]
 
 
-def get_store_list_by_project(project_name):
-    if project_name == "Zhi Yang Yao":
-        return ZYY_STORE_LIST
-    elif project_name == "Enzhico":
-        return ENZ_STORE_LIST
-    elif project_name == "Erassgo":
-        return ERA_STORE_LIST
-    elif project_name == "Kudaku":
-        return KDK_STORE_LIST
-    elif project_name == "Juwara Herbal":
-        return JH_STORE_LIST
-    else:
-        return None
+# def get_store_list_by_project(project_name):
+#     if project_name == "Zhi Yang Yao":
+#         return ZYY_STORE_LIST
+#     elif project_name == "Enzhico":
+#         return ENZ_STORE_LIST
+#     elif project_name == "Erassgo":
+#         return ERA_STORE_LIST
+#     elif project_name == "Kudaku":
+#         return KDK_STORE_LIST
+#     elif project_name == "Juwara Herbal":
+#         return JH_STORE_LIST
+#     else:
+#         return None
 
 
 # -- ORDERS DATA
@@ -372,11 +375,10 @@ def initialize_omset_data_session(project_name, marketplace_list, store_list):
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_omset_column_config(project_name):
+def get_omset_column_config(store_list):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
-    store_list = get_store_list_by_project(project_name)
 
     return {
         "Tanggal": st.column_config.DateColumn(
@@ -436,11 +438,10 @@ def initialize_ads_data_session(project_name, marketplace_list, store_list):
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_ads_column_config(project_name):
+def get_ads_column_config(store_list):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
-    store_list = get_store_list_by_project(project_name)
 
     return {
         "Tanggal": st.column_config.DateColumn(
@@ -492,11 +493,10 @@ def initialize_stock_data_session():
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_stock_column_config(project_name):
+def get_stock_column_config(store_list):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
-    store_list = get_store_list_by_project(project_name)
 
     return {
         "Tanggal": st.column_config.DateColumn(
@@ -601,11 +601,10 @@ def initialize_marketplace_data_session(project_name, marketplace_list, store_li
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_marketplace_column_config(project_name):
+def get_marketplace_column_config(store_list):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
-    store_list = get_store_list_by_project(project_name)
 
     return {
         "Tanggal": st.column_config.DateColumn(
@@ -649,31 +648,33 @@ def get_marketplace_column_config(project_name):
     }
 
 
-def initialize_cpas_data_session(branch_name, brand, akun):
+def initialize_cpas_data_session(project_name, store_list, akun_list):
     """
-    Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
+    Menginisialisasi DataFrame di st.session_state untuk store_list tertentu jika belum ada.
 
     Args:
-        branch_name (str): Nama brand untuk kunci di session_state.
+        project_name (str): Nama store_list untuk kunci di session_state.
         marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
         akun (list): Daftar nama toko yang akan diisi ke DataFrame.
     """
-    session_key = f"df_{branch_name}_cpas"
+    session_key = f"df_{project_name}_cpas"
 
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(pd.Timestamp.today().date(), index=range(len(akun))),
-            "Brand": brand,
-            "Akun": akun,
-            "Spend": [0.0] * len(akun),
-            "Konversi": [0] * len(akun),
-            "Gross Revenue": [0.0] * len(akun),
+            "Tanggal": pd.Series(
+                pd.Timestamp.today().date(), index=range(len(akun_list))
+            ),
+            "Nama Toko": store_list,
+            "Akun": akun_list,
+            "Spend": [0.0] * len(akun_list),
+            "Konversi": [0] * len(akun_list),
+            "Gross Revenue": [0.0] * len(akun_list),
         }
         st.session_state[session_key] = pd.DataFrame(data)
 
 
-def get_cpas_column_config():
+def get_cpas_column_config(store_list, akun_list):
     """
     Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
     """
@@ -685,14 +686,14 @@ def get_cpas_column_config():
             format="YYYY-MM-DD",
             required=True,
         ),
-        "Brand": st.column_config.SelectboxColumn(
-            "Brand",
-            options=BRAND_LIST,
+        "Nama Toko": st.column_config.SelectboxColumn(
+            "Nama Toko",
+            options=store_list,
             required=True,
         ),
         "Akun": st.column_config.SelectboxColumn(
             "Akun",
-            options=AKUN_LIST,
+            options=akun_list,
             required=True,
         ),
         "Spend": st.column_config.NumberColumn(
