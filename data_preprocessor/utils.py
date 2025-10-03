@@ -363,7 +363,8 @@ def initialize_omset_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                pd.Timestamp.today().date(), index=range(len(store_list))
+                pd.Timestamp.today().date() - timedelta(days=1),
+                index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
             "Nama Toko": store_list,
@@ -428,7 +429,8 @@ def initialize_ads_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                pd.Timestamp.today().date(), index=range(len(store_list))
+                pd.Timestamp.today().date() - timedelta(days=1),
+                index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
             "Nama Toko": store_list,
@@ -460,12 +462,6 @@ def get_ads_column_config(store_list):
             options=store_list,
             required=True,
         ),
-        # "Nominal Budget Ads": st.column_config.NumberColumn(
-        #     "Nominal Budget Ads (Rp)",
-        #     min_value=0.0,
-        #     format="accounting",
-        #     required=True,
-        # ),
         "Nominal Aktual Ads": st.column_config.NumberColumn(
             "Nominal Aktual Ads (Rp)",
             min_value=0.0,
@@ -484,7 +480,9 @@ def initialize_stock_data_session():
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(pd.Timestamp.today().date(), index=range(5)),
+            "Tanggal": pd.Series(
+                pd.Timestamp.today().date() - timedelta(days=1), index=range(5)
+            ),
             "Marketplace": None,
             "Nama Toko": None,
             "Nominal Budget Ads": [0.0] * 5,
@@ -543,7 +541,9 @@ def initialize_non_ads_data_session(branch_name):
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(pd.Timestamp.today().date(), index=range(5)),
+            "Tanggal": pd.Series(
+                pd.Timestamp.today().date() - timedelta(days=1), index=range(5)
+            ),
             "Nominal Aktual Non Ads": None,
             "Keterangan": None,
         }
