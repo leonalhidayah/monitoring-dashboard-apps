@@ -1197,14 +1197,14 @@ def insert_finance_cpas_data(data: pd.DataFrame):
         cur = conn.cursor()
 
         query = """
-            INSERT INTO finance_budget_ads_cpas (tanggal, nama_toko, akun, nominal_budget_ads)
+            INSERT INTO finance_budget_ads_cpas (tanggal, nama_toko, akun, nominal_aktual_ads)
             VALUES (
                 %s, %s, %s, %s
             )
             ON CONFLICT (tanggal, akun) DO UPDATE
             SET
                 nama_toko = EXCLUDED.nama_toko,
-                nominal_budget_ads = EXCLUDED.nominal_budget_ads
+                nominal_aktual_ads = EXCLUDED.nominal_aktual_ads
         """
         records = [
             tuple(row)
@@ -1559,3 +1559,42 @@ def insert_order_flags_batch(tanggal_input, kategori, order_ids) -> bool:
         print(f"Database error, rolling back: {e}")
         conn.rollback()
         return False
+
+
+def update_table(table_name, data_list, pk_cols):
+    """
+    Upsert (insert or update) records ke PostgreSQL secara aman
+    berdasarkan primary key.
+    """
+    if not data_list:
+        return
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # ambil semua kolom dari dict pertama
+    cols = list(data_list[0].keys())
+    col_names = ", ".join(cols)
+
+    # bagian UPDATE untuk kolom selain PK
+    update_clause = ", ".join(
+        [f"{col} = EXCLUDED.{col}" for col in cols if col not in pk_cols]
+    )
+
+    # buat query template
+    query = f"""
+        INSERT INTO {table_name} ({col_names})
+        VALUES %s
+        ON CONFLICT ({", ".join(pk_cols)})
+        DO UPDATE SET {update_clause};
+    """
+
+    # ambil nilai sebagai tuple dari setiap dict
+    values = [tuple(row[col] for col in cols) for row in data_list]
+
+    # ini kunci penting: execute_values akan handle tipe data dengan benar
+    extras.execute_values(cur, query, values)
+
+    conn.commit()
+    cur.close()
+    conn.close()
