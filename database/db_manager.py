@@ -1,5 +1,6 @@
 import logging
 import warnings
+from datetime import date
 
 import pandas as pd
 import psycopg2
@@ -114,6 +115,59 @@ def get_admin_shipments():
     return get_table_data(table_name="admin_shipments")
 
 
+def get_vw_admin_shipments_delivery():
+    """Mengambil semua data dari tabel vw_admin_shipments_delivery."""
+    return get_table_data(table_name="vw_admin_shipments_delivery")
+
+
+def get_target_ads_ratio(project_id: int, year: int, quarter: int) -> float | None:
+    """
+    Mengambil target rasio ads/omset dari budget plan untuk kuartal tertentu.
+
+    Args:
+        project_id (int): ID project.
+        year (int): Tahun budget.
+        quarter (int): Kuartal budget (1-4).
+
+    Returns:
+        float | None: Nilai target rasio dalam persen, atau None jika tidak ditemukan.
+    """
+    query = """
+    SELECT 
+        target_rasio_persen 
+    FROM 
+        finance_budget_plan
+    WHERE 
+        project_id = %(project_id)s
+        AND parameter_name = 'Biaya Marketing (Ads)'
+        AND tahun = %(year)s
+        AND kuartal = %(quarter)s
+    LIMIT 1; -- Ambil satu baris saja karena nilainya sama untuk satu kuartal
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        # Menggunakan read_sql untuk kemudahan, lalu ambil nilainya
+        df = pd.read_sql(
+            query,
+            conn,
+            params={"project_id": project_id, "year": year, "quarter": quarter},
+        )
+        if not df.empty:
+            return df["target_rasio_persen"].iloc[0]
+        else:
+            logging.warning(
+                f"Target rasio tidak ditemukan untuk project {project_id}, Q{quarter} {year}."
+            )
+            return None  # Kembalikan None jika tidak ada target
+    except Exception as e:
+        logging.error(f"Gagal mengambil target rasio: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
 def get_finance_omset():
     return get_table_data(table_name="finance_omset")
 
@@ -131,9 +185,465 @@ def get_vw_budget_ads_monitoring():
     return get_table_data(table_name="vw_budget_ads_monitoring")
 
 
+def get_vw_ads_performance_summary(
+    project_name: str, start_date: date, end_date: date
+) -> pd.DataFrame:
+    """
+    Mengambil data dari view vw_ads_performance_summary berdasarkan filter.
+
+    Args:
+        project_name (str): Nama project yang akan difilter.
+        start_date (date): Tanggal mulai periode.
+        end_date (date): Tanggal akhir periode.
+
+    Returns:
+        pd.DataFrame: DataFrame berisi detail performa.
+                      Mengembalikan DataFrame kosong jika tidak ada data atau terjadi error.
+    """
+    query = """
+    SELECT
+        *
+    FROM
+        vw_ads_performance_summary
+    WHERE
+        project_name = %(project_name)s
+        AND tanggal BETWEEN %(start_date)s AND %(end_date)s
+    ORDER BY
+        tanggal DESC, nama_toko ASC;
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        df = pd.read_sql(
+            query,
+            conn,
+            params={
+                "project_name": project_name,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
+        logging.info(f"Successfully fetched {len(df)} rows for project {project_name}.")
+        return df
+    except Exception as e:
+        logging.error(f"Failed to fetch data from vw_ads_performance_summary: {e}")
+        return pd.DataFrame()  # Kembalikan dataframe kosong jika error
+    finally:
+        if conn:
+            conn.close()
+
+
 def get_payments():
     """Mengambil semua data dari tabel payments."""
     return get_table_data(table_name="payments")
+
+
+def get_dim_projects():
+    """Mengambil semua data dari tabel dim_projects."""
+    return get_table_data(table_name="dim_projects")
+
+
+def get_dim_expense_categories():
+    """Mengambil semua data dari tabel dim_expense_categories ."""
+    return get_table_data(table_name="dim_expense_categories ")
+
+
+def get_map_project_stores():
+    """Mengambil semua data dari tabel map_project_stores ."""
+    return get_table_data(table_name="map_project_stores ")
+
+
+def get_total_sales_target(project_id: int, start_date: str, end_date: str):
+    """
+    Menghitung total TARGET OMSET untuk sebuah project dalam rentang tanggal.
+    """
+    conn = None
+    query = """
+        SELECT
+            SUM(target_bulanan_rp) AS total_target
+        FROM
+            finance_budget_plan
+        WHERE
+            project_id = %(project_id)s
+            AND parameter_name = 'Target Omset' -- Kunci: Hanya mengambil parameter Target Omset
+            AND to_date(tahun || '-' || bulan, 'YYYY-Month') BETWEEN %(start_date)s AND %(end_date)s;
+    """
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            query,
+            {"project_id": project_id, "start_date": start_date, "end_date": end_date},
+        )
+        result = cur.fetchone()
+        return result[0] if result and result[0] is not None else 0
+    except psycopg2.Error as e:
+        logging.error(f"Gagal mengambil total target omset: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+
+def insert_new_stores(df_new_stores: pd.DataFrame):
+    """
+    Memasukkan data toko baru dari DataFrame ke tabel dim_stores.
+    """
+    if df_new_stores.empty:
+        return {
+            "status": "success",
+            "count": 0,
+            "message": "Tidak ada toko baru untuk dimasukkan.",
+        }
+
+    conn = None
+    query = """
+        INSERT INTO dim_stores (nama_toko, marketplace_id)
+        VALUES %s
+        ON CONFLICT (nama_toko) DO NOTHING;
+    """
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        data_tuples = [
+            tuple(row)
+            for row in df_new_stores[["nama_toko", "marketplace_id"]].to_numpy()
+        ]
+
+        extras.execute_values(cur, query, data_tuples)
+
+        inserted_rows = cur.rowcount
+        conn.commit()
+
+        logging.info(
+            f"Berhasil memasukkan/memperbarui {inserted_rows} toko di dim_stores."
+        )
+        return {"status": "success", "count": inserted_rows}
+
+    except psycopg2.Error as e:
+        logging.error(f"Gagal memasukkan data ke dim_stores: {e}")
+        if conn:
+            conn.rollback()
+        return {"status": "error", "message": str(e)}
+
+    finally:
+        if conn:
+            conn.close()
+
+
+def insert_project_store_mapping(df_mapping: pd.DataFrame):
+    """
+    Memasukkan data pemetaan project ke toko dari DataFrame.
+    """
+    if df_mapping.empty:
+        return {
+            "status": "success",
+            "count": 0,
+            "message": "Tidak ada data mapping untuk dimasukkan.",
+        }
+
+    conn = None
+    query = """
+        INSERT INTO map_project_stores (project_id, store_id)
+        VALUES %s
+        ON CONFLICT (project_id, store_id) DO NOTHING;
+    """
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        data_tuples = [
+            tuple(map(int, row))
+            for row in df_mapping[["project_id", "store_id"]].to_numpy()
+        ]
+
+        extras.execute_values(cur, query, data_tuples)
+
+        inserted_rows = cur.rowcount
+        conn.commit()
+
+        logging.info(
+            f"Berhasil memasukkan {inserted_rows} baris pemetaan project-toko."
+        )
+        return {"status": "success", "count": inserted_rows}
+
+    except psycopg2.Error as e:
+        logging.error(f"Gagal memasukkan data mapping: {e}")
+        if conn:
+            conn.rollback()
+        return {"status": "error", "message": str(e)}
+
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_financial_summary(project_id: int, start_date: str, end_date: str):
+    """
+    Query yang diperbarui untuk mencocokkan budget plan 'parameter_name'
+    dengan 'bidang' dari kategori pengeluaran.
+    """
+    conn = None
+    query = """
+    WITH 
+    date_series AS (
+        SELECT generate_series(%(start_date)s::date, %(end_date)s::date, '1 day'::interval) AS tanggal
+    ),
+    -- 1. Mengambil budget plan dan digabungkan dengan kategori untuk mendapatkan SEMUA category_id yang relevan
+    budget_with_categories AS (
+        SELECT 
+            fbp.parameter_name,
+            dec.id AS category_id, -- <-- Kunci: Mengambil category_id
+            dec.tipe_beban,      -- <-- Mengambil tipe beban spesifik
+            fbp.target_bulanan_rp,
+            to_date(fbp.tahun || '-' || fbp.bulan || '-01', 'YYYY-Month-DD') AS month_start
+        FROM finance_budget_plan fbp
+        -- Join berdasarkan parameter_name = bidang
+        JOIN dim_expense_categories dec ON fbp.parameter_name = dec.bidang
+        WHERE fbp.project_id = %(project_id)s AND fbp.parameter_name != 'Target Omset'
+    ),
+    -- 2. Scaffold sekarang berisi baris untuk setiap 'tipe_beban' yang spesifik
+    scaffold AS (
+        SELECT
+            d.tanggal,
+            bwc.parameter_name, -- Ini adalah 'bidang' (misal: HPP)
+            bwc.tipe_beban,     -- Ini adalah kategori spesifik (misal: Beban Gudang)
+            bwc.category_id,    -- ID untuk join
+            -- Alokasi budget harian dibagi rata ke semua tipe_beban dalam satu bidang
+            (bwc.target_bulanan_rp / EXTRACT(DAY FROM (bwc.month_start + interval '1 month - 1 day'))::integer) 
+                / COUNT(*) OVER(PARTITION BY bwc.month_start, bwc.parameter_name) AS budget_harian_rp
+        FROM date_series d
+        CROSS JOIN budget_with_categories bwc
+        WHERE date_trunc('month', d.tanggal) = bwc.month_start
+    ),
+    daily_sales AS (
+        SELECT
+            fo.tanggal,
+            SUM(fo.akrual_basis) AS total_omset_akrual
+        FROM finance_omset fo
+        JOIN dim_stores ds ON fo.nama_toko = ds.nama_toko
+        JOIN map_project_stores mps ON ds.store_id = mps.store_id
+        WHERE mps.project_id = %(project_id)s
+        GROUP BY fo.tanggal
+    ),
+    -- 3. Agregasi cash out berdasarkan category_id
+    daily_cash_out AS (
+        SELECT
+            ft.transaction_date,
+            ft.category_id,
+            SUM(ft.amount) AS total_cash_out
+        FROM finance_transactions ft
+        WHERE ft.project_id = %(project_id)s AND ft.transaction_type = 'OUT'
+        GROUP BY ft.transaction_date, ft.category_id
+    )
+    -- FINAL SELECT: Menggabungkan semuanya berdasarkan category_id
+    SELECT
+        sc.tanggal,
+        sc.tipe_beban AS parameter_name, -- Tampilkan nama yang lebih detail (tipe_beban)
+        0 AS target_rasio_persen, -- Kolom ini mungkin perlu penyesuaian logika
+        sc.budget_harian_rp,
+        COALESCE(ds.total_omset_akrual, 0) AS omset_akrual,
+        COALESCE(dco.total_cash_out, 0) AS total_cash_out
+    FROM scaffold sc
+    LEFT JOIN daily_sales ds ON sc.tanggal = ds.tanggal
+    -- Join final menggunakan category_id
+    LEFT JOIN daily_cash_out dco ON sc.tanggal = dco.transaction_date AND sc.category_id = dco.category_id
+    WHERE 
+        sc.tanggal BETWEEN %(start_date)s AND %(end_date)s
+    ORDER BY sc.tanggal, sc.parameter_name;
+    """
+    try:
+        conn = get_connection()
+        df = pd.read_sql(
+            query,
+            conn,
+            params={
+                "project_id": project_id,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
+        logging.info(
+            f"Berhasil mengambil {len(df)} baris data summary keuangan (dengan scaffold)."
+        )
+        return df
+    except psycopg2.Error as e:
+        logging.error(f"Gagal mengambil financial summary (dengan scaffold): {e}")
+        return pd.DataFrame()
+    finally:
+        if conn:
+            conn.close()
+
+
+def insert_budget_plan(df_long: pd.DataFrame):
+    """
+    Memasukkan atau memperbarui data budget plan dari DataFrame.
+
+    Menggunakan klausa ON CONFLICT (project_id, tahun, bulan, parameter_name) DO UPDATE
+    untuk menangani entri budget yang sudah ada, memungkinkan revisi.
+
+    Args:
+        df_long (pd.DataFrame): DataFrame dalam format panjang (long) yang berisi data budget.
+
+    Returns:
+        dict: Berisi status dan pesan hasil operasi.
+    """
+    if df_long.empty:
+        return {"status": "success", "message": "Tidak ada data untuk dimasukkan."}
+
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        # Langkah 1: Dapatkan pemetaan project_name ke project_id dari database
+        cur.execute("SELECT project_name, project_id FROM dim_projects;")
+        project_map = {name: pid for name, pid in cur.fetchall()}
+
+        # Langkah 2: Ganti kolom 'Project' dengan 'project_id' di DataFrame
+        df_long["project_id"] = df_long["Project"].map(project_map)
+
+        # Validasi jika ada project yang tidak terpetakan
+        if df_long["project_id"].isnull().any():
+            unmapped_projects = df_long[df_long["project_id"].isnull()][
+                "Project"
+            ].unique()
+            return {
+                "status": "error",
+                "message": f"Project tidak ditemukan: {', '.join(unmapped_projects)}",
+            }
+
+        # Langkah 3: Siapkan data untuk bulk insert/update
+        # Ubah nama kolom DataFrame agar sesuai dengan nama kolom di tabel DB
+        df_to_insert = df_long.rename(
+            columns={
+                "Tahun": "tahun",
+                "Kuartal": "kuartal",
+                "Bulan": "bulan",
+                "Parameter": "parameter_name",
+                "Target Rasio": "target_rasio_persen",
+                "Target Bulanan": "target_bulanan_rp",
+            }
+        )
+
+        # Pilih kolom yang relevan dan siapkan tuples
+        cols = [
+            "project_id",
+            "tahun",
+            "kuartal",
+            "bulan",
+            "parameter_name",
+            "target_rasio_persen",
+            "target_bulanan_rp",
+        ]
+        data_tuples = [tuple(x) for x in df_to_insert[cols].to_numpy()]
+
+        # Langkah 4: Buat query dengan ON CONFLICT DO UPDATE
+        query = f"""
+            INSERT INTO finance_budget_plan ({", ".join(cols)})
+            VALUES %s
+            ON CONFLICT (project_id, tahun, bulan, parameter_name) DO UPDATE SET
+                target_rasio_persen = EXCLUDED.target_rasio_persen,
+                target_bulanan_rp = EXCLUDED.target_bulanan_rp;
+        """
+
+        extras.execute_values(cur, query, data_tuples)
+        conn.commit()
+
+        logging.info(
+            f"Berhasil memasukkan/memperbarui {len(data_tuples)} baris budget plan."
+        )
+        return {"status": "success"}
+
+    except psycopg2.Error as e:
+        logging.error(f"Gagal memasukkan budget plan: {e}")
+        if conn:
+            conn.rollback()
+        return {"status": "error", "message": str(e)}
+
+    finally:
+        if conn:
+            conn.close()
+
+
+def insert_cash_out(
+    trans_date,
+    project_name,
+    bidang,
+    tipe_beban,
+    nominal,
+    deskripsi,
+    user_input="system",
+):
+    """
+    Menyimpan satu transaksi pengeluaran (cash out) ke database.
+
+    Fungsi ini melakukan lookup untuk mendapatkan project_id and category_id
+    sebelum memasukkan data ke tabel finance_transactions.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute(
+            "SELECT project_id FROM dim_projects WHERE project_name = %s;",
+            (project_name,),
+        )
+        project_result = cur.fetchone()
+        if not project_result:
+            return {
+                "status": "error",
+                "message": f"Project '{project_name}' tidak ditemukan.",
+            }
+        project_id = project_result[0]
+
+        cur.execute(
+            "SELECT id FROM dim_expense_categories WHERE bidang = %s AND tipe_beban = %s;",
+            (bidang, tipe_beban),
+        )
+        category_result = cur.fetchone()
+        if not category_result:
+            return {
+                "status": "error",
+                "message": f"Kategori '{bidang} - {tipe_beban}' tidak ditemukan.",
+            }
+        category_id = category_result[0]
+
+        query = """
+            INSERT INTO finance_transactions (
+                transaction_date, project_id, transaction_type, amount, 
+                category_id, description, user_input
+            ) VALUES (%s, %s, 'OUT', %s, %s, %s, %s);
+        """
+        cur.execute(
+            query,
+            (
+                trans_date,
+                project_id,
+                nominal,
+                category_id,
+                deskripsi,
+                user_input,
+            ),
+        )
+
+        conn.commit()
+        logging.info(f"Berhasil menyimpan transaksi cash out sebesar {nominal}.")
+        return {"status": "success"}
+
+    except psycopg2.Error as e:
+        logging.error(f"Gagal menyimpan transaksi cash out: {e}")
+        if conn:
+            conn.rollback()
+        return {"status": "error", "message": str(e)}
+
+    finally:
+        if conn:
+            conn.close()
 
 
 # --- ADVERTISER DATA ---
@@ -493,85 +1003,6 @@ def insert_orders_to_normalized_table(
             conn.close()
 
 
-# def insert_orders_normalized(df: pd.DataFrame, update_cols: list) -> dict:
-#     """
-#     Insert batch data yang sudah dinormalisasi ke dalam tabel orders.
-#     Menggunakan mekanisme ON CONFLICT DO UPDATE (Upsert).
-
-#     Args:
-#         df (pd.DataFrame): DataFrame yang sudah diagregasi per order_id.
-#         update_cols (list): Daftar nama kolom yang akan diperbarui jika terjadi konflik.
-
-#     Returns:
-#         dict: Berisi status keberhasilan dan pesan.
-#     """
-#     # 1. Sesuaikan daftar kolom dengan skema tabel 'orders' di database
-#     table_columns = [
-#         "order_id",
-#         "customer_id",
-#         "order_status",
-#         "is_fake_order",
-#         "waktu_pesanan_dibuat",
-#         "waktu_pesanan_dibayar",
-#         "waktu_kadaluwarsa",
-#         "waktu_proses",
-#         "waktu_selesai",
-#         "waktu_pembatalan",
-#         "yang_membatalkan",
-#         "pesan_dari_pembeli",
-#         # 'timestamp_input_data' akan di-handle oleh database
-#     ]
-
-#     # Pastikan DataFrame input memiliki semua kolom yang diperlukan
-#     df_insert = df[table_columns]
-
-#     conn = None
-#     try:
-#         conn = get_connection()
-#         cursor = conn.cursor()
-
-#         # 2. Buat bagian SET untuk klausa DO UPDATE secara dinamis
-#         update_set_clause = ", ".join(
-#             [f"{col} = EXCLUDED.{col}" for col in update_cols]
-#         )
-#         # Selalu update timestamp terakhir diubah
-#         update_set_clause += ", timestamp_input_data = CURRENT_TIMESTAMP"
-
-#         # 3. SQL Template yang lebih aman dan presisi
-#         insert_sql = f"""
-#             INSERT INTO orders ({", ".join(table_columns)})
-#             VALUES %s
-#             ON CONFLICT (order_id) DO UPDATE SET
-#               {update_set_clause};
-#         """
-
-#         # 4. Konversi DataFrame ke list of tuples
-#         # Cara ini lebih aman dan memastikan urutan kolom benar
-#         values = list(df_insert.to_records(index=False))
-
-#         # Eksekusi query menggunakan execute_values untuk efisiensi
-#         extras.execute_values(cursor, insert_sql, values, page_size=1000)
-#         conn.commit()
-
-#         logging.info(
-#             f"Berhasil melakukan upsert {len(df_insert)} records ke tabel orders."
-#         )
-#         return {
-#             "status": "success",
-#             "message": f"Berhasil memproses {len(df_insert)} data pesanan.",
-#         }
-
-#     except (Exception, psycopg2.Error) as e:
-#         if conn:
-#             conn.rollback()
-#         logging.error(f"Gagal insert batch orders: {e}", exc_info=True)
-#         return {"status": "error", "message": str(e)}
-
-#     finally:
-#         if conn:
-#             conn.close()
-
-
 # --- FINANCE DATA
 def insert_omset_data(data: pd.DataFrame):
     """
@@ -635,6 +1066,70 @@ def insert_omset_data(data: pd.DataFrame):
             logging.info("Koneksi database ditutup.")
 
 
+def insert_omset_reg_data(data: pd.DataFrame):
+    """
+    Menyimpan atau memperbarui data omset reguler dari DataFrame ke database.
+    Menggunakan transaksi untuk memastikan operasi berjalan atomic.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        query = """
+            INSERT INTO finance_omset_reg (
+                tanggal, platform, akrual_basis, cash_basis, bukti, akun_bank
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s
+            )
+            ON CONFLICT (tanggal, platform) DO UPDATE SET
+                akrual_basis = EXCLUDED.akrual_basis,
+                cash_basis = EXCLUDED.cash_basis,
+                bukti = EXCLUDED.bukti,
+                akun_bank = EXCLUDED.akun_bank;
+        """
+
+        # Pastikan urutan kolom sesuai query
+        records = [
+            tuple(row)
+            for row in data[
+                [
+                    "Tanggal",
+                    "Platform",
+                    "Akrual Basis",
+                    "Cash Basis",
+                    "Bukti",
+                    "Akun Bank",
+                ]
+            ].to_numpy()
+        ]
+
+        cur.executemany(query, records)
+        conn.commit()
+
+        logging.info(
+            f"Berhasil menyimpan/memperbarui {len(records)} records finance_omset_reg ke database."
+        )
+        return {
+            "status": "success",
+            "message": f"{len(records)} records finance_omset_reg berhasil disimpan atau diperbarui.",
+        }
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        if conn:
+            conn.rollback()
+        logging.error(
+            f"Error saat menyimpan data finance_omset_reg: {error}", exc_info=True
+        )
+        return {"status": "error", "message": str(error)}
+
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+            logging.info("Koneksi database ditutup.")
+
+
 def insert_budget_ads_data(data: pd.DataFrame):
     """
     Menyimpan atau memperbarui data budget ads dari DataFrame ke database.
@@ -691,7 +1186,164 @@ def insert_budget_ads_data(data: pd.DataFrame):
             logging.info("Koneksi database ditutup.")
 
 
-def insert_budget_non_ads_data(data: pd.DataFrame):
+def insert_finance_cpas_data(data: pd.DataFrame):
+    """
+    Memasukkan atau memperbarui data CPAS dari DataFrame ke dalam tabel finance_budget_ads_cpas.
+    Menggunakan ON CONFLICT DO UPDATE untuk menangani entri ganda secara efisien.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        query = """
+            INSERT INTO finance_budget_ads_cpas (tanggal, nama_toko, akun, nominal_budget_ads)
+            VALUES (
+                %s, %s, %s, %s
+            )
+            ON CONFLICT (tanggal, akun) DO UPDATE
+            SET
+                nama_toko = EXCLUDED.nama_toko,
+                nominal_budget_ads = EXCLUDED.nominal_budget_ads
+        """
+        records = [
+            tuple(row)
+            for row in data[
+                [
+                    "Tanggal",
+                    "Nama Toko",
+                    "Akun",
+                    "Nominal Aktual Ads",
+                ]
+            ].to_numpy()
+        ]
+
+        cur.executemany(query, records)
+        conn.commit()
+
+        logging.info(
+            f"Berhasil menyimpan/memperbarui {len(records)} records finance_budget_ads_cpas ke database."
+        )
+        return {
+            "status": "success",
+            "message": f"{len(records)} records finance_budget_ads_cpas berhasil disimpan atau diperbarui.",
+        }
+
+    except psycopg2.Error as e:
+        logging.error(f"Gagal memasukkan data ke database: {e}")
+        conn.rollback()  # Batalkan transaksi jika terjadi kesalahan
+        return False
+
+    finally:
+        if conn:
+            conn.close()
+
+
+def insert_budget_reg_ads_data(data: pd.DataFrame):
+    """
+    Menyimpan atau memperbarui data budget reg ads dari DataFrame ke database.
+    Menggunakan transaksi untuk memastikan operasi berjalan atomic.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        query = """
+            INSERT INTO finance_budget_ads_reg (
+                tanggal, akun, nominal_aktual_ads
+            ) VALUES (
+                %s, %s, %s
+            )
+            ON CONFLICT (tanggal, akun) DO UPDATE SET
+                nominal_aktual_ads = EXCLUDED.nominal_aktual_ads;
+        """
+
+        records = [
+            tuple(row)
+            for row in data[
+                [
+                    "Tanggal",
+                    "Akun",
+                    "Nominal Aktual Ads",
+                ]
+            ].to_numpy()
+        ]
+
+        cur.executemany(query, records)
+        conn.commit()
+        logging.info(
+            f"Berhasil menyimpan/memperbarui {len(records)} records finance_budget_ads_reg ke database."
+        )
+        return {
+            "status": "success",
+            "message": f"{len(records)} records finance_omset berhasil disimpan atau diperbarui.",
+        }
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        if conn:
+            conn.rollback()
+        logging.error(f"Error saat menyimpan data: {error}", exc_info=True)
+        return {"status": "error", "message": str(error)}
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+            logging.info("Koneksi database ditutup.")
+
+
+# def insert_budget_non_ads_data(data: pd.DataFrame):
+#     """
+#     Menyimpan atau memperbarui data budget ads dari DataFrame ke database.
+#     Menggunakan transaksi untuk memastikan operasi berjalan atomic.
+#     """
+#     conn = None
+#     try:
+#         conn = get_connection()
+#         cur = conn.cursor()
+
+#         query = """
+#             INSERT INTO finance_budget_non_ads (
+#                 tanggal, nominal_aktual_non_ads, keterangan
+#             ) VALUES (
+#                 %s, %s, %s
+#             );
+#         """
+
+#         records = [
+#             tuple(row)
+#             for row in data[
+#                 [
+#                     "Tanggal",
+#                     "Nominal Aktual Non Ads",
+#                     "Keterangan",
+#                 ]
+#             ].to_numpy()
+#         ]
+
+#         cur.executemany(query, records)
+#         conn.commit()
+#         logging.info(
+#             f"Berhasil menyimpan/memperbarui {len(records)} records finance_budget_non_ads ke database."
+#         )
+#         return {
+#             "status": "success",
+#             "message": f"{len(records)} records finance_omset berhasil disimpan atau diperbarui.",
+#         }
+
+#     except (Exception, psycopg2.DatabaseError) as error:
+#         if conn:
+#             conn.rollback()
+#         logging.error(f"Error saat menyimpan data: {error}", exc_info=True)
+#         return {"status": "error", "message": str(error)}
+#     finally:
+#         if conn:
+#             cur.close()
+#             conn.close()
+#             logging.info("Koneksi database ditutup.")
+
+
+def insert_budget_non_ads_fo_data(data: pd.DataFrame):
     """
     Menyimpan atau memperbarui data budget ads dari DataFrame ke database.
     Menggunakan transaksi untuk memastikan operasi berjalan atomic.
@@ -702,11 +1354,13 @@ def insert_budget_non_ads_data(data: pd.DataFrame):
         cur = conn.cursor()
 
         query = """
-            INSERT INTO finance_budget_non_ads (
-                tanggal, nominal_aktual_non_ads, keterangan
+            INSERT INTO finance_budget_non_ads_fo (
+                tanggal, marketplace, nama_toko, nominal_aktual_non_ads
             ) VALUES (
-                %s, %s, %s
-            );
+                %s, %s, %s, %s
+            ) 
+            ON CONFLICT (tanggal, nama_toko) DO UPDATE SET
+                nominal_aktual_non_ads = EXCLUDED.nominal_aktual_non_ads;
         """
 
         records = [
@@ -714,8 +1368,9 @@ def insert_budget_non_ads_data(data: pd.DataFrame):
             for row in data[
                 [
                     "Tanggal",
+                    "Marketplace",
+                    "Nama Toko",
                     "Nominal Aktual Non Ads",
-                    "Keterangan",
                 ]
             ].to_numpy()
         ]
@@ -742,74 +1397,58 @@ def insert_budget_non_ads_data(data: pd.DataFrame):
             logging.info("Koneksi database ditutup.")
 
 
-# def insert_cashflow_data(tanggal, jenis_transaksi, keterangan, nominal):
-#     """Menyimpan data cashflow ke dalam database."""
-#     conn = get_connection()
-#     try:
-#         cursor = conn.cursor()
-#         cursor.execute(
-#             """
-#             INSERT INTO finance_cashflow (tanggal, jenis_transaksi, keterangan, nominal)
-#             VALUES (%s, %s, %s, %s);
-#             """,
-#             (tanggal, jenis_transaksi, keterangan, nominal),
-#         )
-#         conn.commit()
-#         return True
-#     except Exception as e:
-#         st.error(f"Gagal menyimpan data cashflow: {e}")
-#         conn.rollback()
-#         return False
-#     finally:
-#         conn.close()
-
-
-def insert_budget_plan_long(df_long: pd.DataFrame):
+def insert_budget_non_ads_lainnya_data(data: pd.DataFrame):
     """
-    Insert data budget plan (long format) ke database Postgres.
-    Jika data dengan (parameter, tahun, kuartal, bulan) sudah ada, maka update.
+    Menyimpan atau memperbarui data budget ads dari DataFrame ke database.
+    Menggunakan transaksi untuk memastikan operasi berjalan atomic.
     """
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    query = """
-        INSERT INTO finance_budget_plan (
-            parameter, target_ratio, target_quarter, tahun, kuartal, bulan, target_bulanan, created_at, updated_at
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-        ON CONFLICT (parameter, tahun, kuartal, bulan)
-        DO UPDATE SET
-            target_ratio = EXCLUDED.target_ratio,
-            target_quarter = EXCLUDED.target_quarter,
-            target_bulanan = EXCLUDED.target_bulanan,
-            updated_at = NOW();
-    """
-
-    data = [
-        (
-            row["Parameter"],
-            float(str(row["Target Rasio"]).replace("%", "")),  # ambil angka rasio
-            float(row["Target Kuartal"]),
-            int(row["Tahun"]),
-            int(row["Kuartal"]),
-            row["Bulan"],
-            float(row["Target Bulanan"]),
-        )
-        for _, row in df_long.iterrows()
-    ]
-
+    conn = None
     try:
-        extras.execute_batch(cursor, query, data)
+        conn = get_connection()
+        cur = conn.cursor()
+
+        query = """
+            INSERT INTO finance_budget_non_ads_lainnya (
+                tanggal, nama_project, keterangan, nominal_aktual_non_ads
+            ) VALUES (
+                %s, %s, %s, %s
+            )
+            ON CONFLICT (tanggal, nama_project, keterangan) DO UPDATE SET
+                nominal_aktual_non_ads = EXCLUDED.nominal_aktual_non_ads;
+        """
+
+        records = [
+            tuple(row)
+            for row in data[
+                [
+                    "Tanggal",
+                    "Nama Project",
+                    "Keterangan",
+                    "Nominal Aktual Non Ads",
+                ]
+            ].to_numpy()
+        ]
+
+        cur.executemany(query, records)
         conn.commit()
-        st.success(
-            f"✅ {len(data)} baris budget plan berhasil disimpan/diupdate ke database."
+        logging.info(
+            f"Berhasil menyimpan/memperbarui {len(records)} records finance_budget_non_ads ke database."
         )
-    except Exception as e:
-        conn.rollback()
-        st.error(f"❌ Gagal menyimpan data: {e}")
+        return {
+            "status": "success",
+            "message": f"{len(records)} records finance_omset berhasil disimpan atau diperbarui.",
+        }
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        if conn:
+            conn.rollback()
+        logging.error(f"Error saat menyimpan data: {error}", exc_info=True)
+        return {"status": "error", "message": str(error)}
     finally:
-        # cursor.close()
-        conn.close()
+        if conn:
+            cur.close()
+            conn.close()
+            logging.info("Koneksi database ditutup.")
 
 
 # --- RETURNS DATA ---
@@ -878,3 +1517,45 @@ def insert_returns_data_batch(tanggal, order_ids):
         if conn:
             cursor.close()
             conn.close()
+
+
+# --- ORDER KHUSUS ---
+def insert_order_flags_batch(tanggal_input, kategori, order_ids) -> bool:
+    """
+    Menyisipkan beberapa baris data ke tabel order_flags secara efisien (batch).
+
+    Args:
+        tanggal_input (date): Tanggal yang dipilih dari form.
+        kategori (str): Kategori yang dipilih dari form.
+        order_ids (List[str]): Daftar order_id yang akan diinput.
+
+    Returns:
+        bool: True jika berhasil, False jika terjadi error.
+    """
+    conn = get_connection()
+
+    # SQL Query dengan placeholder untuk keamanan
+    query = """
+        INSERT INTO order_flags (order_id, kategori, tanggal_input)
+        VALUES (%s, %s, %s);
+    """
+
+    # Mempersiapkan data dalam format yang dibutuhkan (list of tuples)
+    data_to_insert = [(oid, kategori, tanggal_input) for oid in order_ids]
+
+    try:
+        # Menggunakan koneksi yang sudah ada
+        with conn.cursor() as cur:
+            # Eksekusi query untuk semua data sekaligus
+            cur.executemany(query, data_to_insert)
+
+        # Commit transaksi untuk menyimpan perubahan
+        conn.commit()
+        print(f"Successfully inserted {len(data_to_insert)} rows into order_flags.")
+        return True
+
+    except psycopg2.Error as e:
+        # Jika terjadi error, batalkan semua perubahan (rollback)
+        print(f"Database error, rolling back: {e}")
+        conn.rollback()
+        return False

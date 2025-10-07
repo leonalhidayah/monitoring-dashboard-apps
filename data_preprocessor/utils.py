@@ -1,119 +1,22 @@
 import io
 import re
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import pytz
 import streamlit as st
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-project_root = Path().cwd().parent
-
-jakarta_tz = pytz.timezone("Asia/Jakarta")
-now_in_jakarta = datetime.now(jakarta_tz)
-yesterday_in_jakarta = now_in_jakarta - timedelta(days=1)
-
-# GLOBAL VARIABLE
-# ZYY_STORE_LIST = [
-#     "SP zhi yang yao official store",
-#     "SP zhi yang yao",
-#     "SP zhi yang yao (iklan eksternal FB)",
-#     "SP zhi yang yao official",
-#     "SP zhi yang yao id",
-#     "SP zhi yang yao shop",
-#     "SP zhi yang yao indonesia",
-#     "SP zhi yang yao mart",
-#     "SP zhi yang yao store",
-#     "TT zhi yang yao",
-#     "LZ zhi yang yao",
-#     "LZ zhi yang yao id",
-#     "LZ zhi yang yao store makasar",
-#     "TP zhi yang yao official store",
-#     "TP zhi yang yao",
-#     "TP zhi yang yao store makassar",
-#     "TP zhi yang yao official medan",
-# ]
-
-# JH_STORE_LIST = [
-#     "SP juwara herbal official store",
-#     "TT juwaraherbal",
-# ]
-
-# ENZ_STORE_LIST = [
-#     "SP enzhico",
-#     "SP enzhico shop",
-#     "SP enzhico store",
-#     "SP enzhico store indonesia",
-#     "SP enzhico shop indonesia",
-#     "SP enzhico indonesia",
-#     "SP enzhico authorize store",
-#     "TT enzhico authorized store",
-#     "LZ enzhico",
-#     "LZ enzhico store",
-#     "TP enzhico official store",
-# ]
-
-# ERA_STORE_LIST = [
-#     "SP erassgo",
-#     "SP erassgo bandung",
-#     "SP erassgo official",
-#     "SP erassgo official store",
-#     "SP erassgo.co",
-#     "SP erassgo makassar",
-#     "TP erassgo",
-#     "LZ erassgo",
-#     "LZ erassgo store id",
-# ]
-
-# KDK_STORE_LIST = [
-#     "SP kudaku",
-#     "SP kudaku store",
-#     "SP kudaku official store",
-#     "SP kudaku id",
-#     "SP kudaku indonesia",
-#     "TT kudaku milk",
-#     "LZ kudaku",
-# ]
-
-TOKO_BANDUNG = [
-    "SP zhi yang yao official",
-    "SP erassgo bandung",
-    "SP juwara herbal official store",
-    "TT juwara herbal",
-]
-MARKETPLACE_LIST = ["Lazada", "Shopee", "TikTok", "Tokopedia"]
-BRAND_LIST = ["Zhi Yang Yao", "Enzhico", "Erassgo"]
-# ZYY_AKUN_LIST = [
-#     "Zhi yang yao mall 1",
-#     "Zhi yang yao CPAS 03",
-#     "Zhi yang yao CPAS",
-#     "Zhi yang yao CPAS Tokopedia",
-# ]
-
-# ENZ_AKUN_LIST = [
-#     "Erassgo CPAS 1",
-#     "Erassgo mall 1",
-#     "Enzhico CPAS 1",
-# ]
-
-
-# def get_store_list_by_project(project_name):
-#     if project_name == "Zhi Yang Yao":
-#         return ZYY_STORE_LIST
-#     elif project_name == "Enzhico":
-#         return ENZ_STORE_LIST
-#     elif project_name == "Erassgo":
-#         return ERA_STORE_LIST
-#     elif project_name == "Kudaku":
-#         return KDK_STORE_LIST
-#     elif project_name == "Juwara Herbal":
-#         return JH_STORE_LIST
-#     else:
-#         return None
+from views.config import (
+    ADV_MP_MAP_PROJECT,
+    AKUN_REGULAR,
+    MARKETPLACE_LIST,
+    PLATFORM_REGULAR,
+    TOKO_BANDUNG,
+    YESTERDAY_IN_JAKARTA,
+)
 
 
 # -- ORDERS DATA
@@ -368,7 +271,7 @@ def initialize_omset_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                yesterday_in_jakarta,
+                YESTERDAY_IN_JAKARTA,
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -419,6 +322,62 @@ def get_omset_column_config(store_list):
     }
 
 
+# FINANCE DATA
+def initialize_omset_reg_data_session(project_name):
+    """
+    Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
+    """
+    session_key = f"df_{project_name}_omset_reg"
+
+    if session_key not in st.session_state:
+        # Buat DataFrame default dengan kolom yang dibutuhkan
+        data = {
+            "Tanggal": pd.Series(
+                YESTERDAY_IN_JAKARTA,
+                index=range(len(PLATFORM_REGULAR)),
+            ),
+            "Platform": PLATFORM_REGULAR,
+            "Akrual Basis": [0.0] * len(PLATFORM_REGULAR),
+            "Cash Basis": [0.0] * len(PLATFORM_REGULAR),
+            "Bukti": [None] * len(PLATFORM_REGULAR),
+            "Akun Bank": [None] * len(PLATFORM_REGULAR),
+        }
+        st.session_state[session_key] = pd.DataFrame(data)
+
+
+def get_omset_reg_column_config():
+    """
+    Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
+    """
+
+    return {
+        "Tanggal": st.column_config.DateColumn(
+            "Tanggal",
+            min_value=pd.Timestamp(2023, 1, 1),
+            format="YYYY-MM-DD",
+            required=True,
+        ),
+        "Platform": st.column_config.SelectboxColumn(
+            "Platform",
+            options=PLATFORM_REGULAR,
+            required=True,
+        ),
+        "Akrual Basis": st.column_config.NumberColumn(
+            "Akrual Basis (Rp)",
+            min_value=0.0,
+            format="accounting",
+            required=True,
+        ),
+        "Cash Basis": st.column_config.NumberColumn(
+            "Cash Basis (Rp)",
+            min_value=0.0,
+            format="accounting",
+        ),
+        "Bukti": st.column_config.TextColumn("Bukti"),
+        "Akun Bank": st.column_config.TextColumn("Akun Bank"),
+    }
+
+
 def initialize_ads_data_session(project_name, marketplace_list, store_list):
     """
     Menginisialisasi DataFrame di st.session_state untuk project tertentu jika belum ada.
@@ -434,7 +393,7 @@ def initialize_ads_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                yesterday_in_jakarta,
+                YESTERDAY_IN_JAKARTA,
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -475,6 +434,193 @@ def get_ads_column_config(store_list):
     }
 
 
+def initialize_finance_cpas_data_session(project_name, store_list, akun_list):
+    """
+    Menginisialisasi DataFrame di st.session_state untuk store_list tertentu jika belum ada.
+
+    Args:
+        project_name (str): Nama store_list untuk kunci di session_state.
+        marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
+        akun (list): Daftar nama toko yang akan diisi ke DataFrame.
+    """
+    session_key = f"df_{project_name}_cpas"
+
+    if session_key not in st.session_state:
+        # Buat DataFrame default dengan kolom yang dibutuhkan
+        data = {
+            "Tanggal": pd.Series(
+                YESTERDAY_IN_JAKARTA,
+                index=range(len(akun_list)),
+            ),
+            "Nama Toko": store_list,
+            "Akun": akun_list,
+            "Nominal Aktual Ads": [0.0] * len(akun_list),
+        }
+        st.session_state[session_key] = pd.DataFrame(data)
+
+
+def get_finance_cpas_column_config(store_list, akun_list):
+    """
+    Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
+    """
+
+    return {
+        "Tanggal": st.column_config.DateColumn(
+            "Tanggal",
+            min_value=pd.Timestamp(2023, 1, 1),
+            format="YYYY-MM-DD",
+            required=True,
+        ),
+        "Nama Toko": st.column_config.SelectboxColumn(
+            "Nama Toko",
+            options=store_list,
+            required=True,
+        ),
+        "Akun": st.column_config.SelectboxColumn(
+            "Akun",
+            options=akun_list,
+            required=True,
+        ),
+        "Nominal Aktual Ads": st.column_config.NumberColumn(
+            "Nominal Aktual Ads (Rp)", min_value=None, format="accounting"
+        ),
+    }
+
+
+def initialize_non_ads_lainnya_data_session():
+    """
+    Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
+    """
+    session_key = "df_non_ads_lainnya"
+
+    if session_key not in st.session_state:
+        # Buat DataFrame default dengan kolom yang dibutuhkan
+        data = {
+            "Tanggal": pd.Series(YESTERDAY_IN_JAKARTA, index=range(1)),
+            "Nama Project": ["Enzhico"],
+            "Keterangan": ["Talent"],
+            "Nominal Aktual Non Ads": [0.0],
+        }
+        st.session_state[session_key] = pd.DataFrame(data)
+
+
+def get_non_ads_lainnya_column_config():
+    """
+    Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
+    """
+    return {
+        "Tanggal": st.column_config.DateColumn(
+            "Tanggal",
+            min_value=pd.Timestamp(2023, 1, 1),
+            default=YESTERDAY_IN_JAKARTA,
+            format="YYYY-MM-DD",
+            required=True,
+        ),
+        "Nama Project": st.column_config.SelectboxColumn(
+            "Nama Project", options=list(ADV_MP_MAP_PROJECT.keys()), required=True
+        ),
+        "Keterangan": st.column_config.TextColumn("Keterangan", required=True),
+        "Nominal Aktual Non Ads": st.column_config.NumberColumn(
+            "Nominal Aktual Non Ads (Rp)",
+            min_value=0.0,
+            format="accounting",
+            required=True,
+        ),
+    }
+
+
+def initialize_non_ads_data_session(project_name, marketplace_list, store_list):
+    """
+    Menginisialisasi DataFrame di st.session_state untuk project tertentu jika belum ada.
+
+    Args:
+        project_name (str): Nama project untuk kunci di session_state.
+        marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
+        store_list (list): Daftar nama toko yang akan diisi ke DataFrame.
+    """
+    session_key = f"df_{project_name}_ads"
+
+    if session_key not in st.session_state:
+        # Buat DataFrame default dengan kolom yang dibutuhkan
+        data = {
+            "Tanggal": pd.Series(
+                YESTERDAY_IN_JAKARTA,
+                index=range(len(store_list)),
+            ),
+            "Marketplace": marketplace_list,
+            "Nama Toko": store_list,
+            "Nominal Aktual Non Ads": None,
+        }
+        st.session_state[session_key] = pd.DataFrame(data)
+
+
+def get_non_ads_column_config(store_list):
+    """
+    Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
+    """
+
+    return {
+        "Tanggal": st.column_config.DateColumn(
+            "Tanggal",
+            min_value=pd.Timestamp(2023, 1, 1),
+            format="YYYY-MM-DD",
+            required=True,
+        ),
+        "Marketplace": st.column_config.SelectboxColumn(
+            "Marketplace",
+            options=MARKETPLACE_LIST,
+            required=True,
+        ),
+        "Nama Toko": st.column_config.SelectboxColumn(
+            "Nama Toko",
+            options=store_list,
+            required=True,
+        ),
+        "Nominal Aktual Non Ads": st.column_config.NumberColumn(
+            "Nominal Aktual Non Ads (Rp)",
+            min_value=0.0,
+            format="accounting",
+        ),
+    }
+
+
+def initialize__ads_reg_data_session(branch_name):
+    """
+    Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
+    """
+    session_key = f"df_{branch_name}_reg_ads"
+
+    if session_key not in st.session_state:
+        # Buat DataFrame default dengan kolom yang dibutuhkan
+        data = {
+            "Tanggal": pd.Series(YESTERDAY_IN_JAKARTA, index=range(3)),
+            "Akun": AKUN_REGULAR,
+            "Nominal Aktual Ads": None,
+        }
+        st.session_state[session_key] = pd.DataFrame(data)
+
+
+def get_ads_reg_column_config():
+    """
+    Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
+    """
+    return {
+        "Tanggal": st.column_config.DateColumn(
+            "Tanggal",
+            min_value=pd.Timestamp(2023, 1, 1),
+            format="YYYY-MM-DD",
+            required=True,
+        ),
+        "Akun": st.column_config.SelectboxColumn("Akun", options=AKUN_REGULAR),
+        "Nominal Aktual Ads": st.column_config.NumberColumn(
+            "Nominal Aktual Ads (Rp)",
+            min_value=0.0,
+            format="accounting",
+        ),
+    }
+
+
+# -- STOCK --
 def initialize_stock_data_session():
     """
     Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
@@ -485,7 +631,7 @@ def initialize_stock_data_session():
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(yesterday_in_jakarta, index=range(5)),
+            "Tanggal": pd.Series(YESTERDAY_IN_JAKARTA, index=range(5)),
             "Marketplace": None,
             "Nama Toko": None,
             "Nominal Budget Ads": [0.0] * 5,
@@ -530,58 +676,10 @@ def get_stock_column_config(store_list):
     }
 
 
-def initialize_non_ads_data_session(branch_name):
-    """
-    Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
-
-    Args:
-        project_name (str): Nama brand untuk kunci di session_state.
-        marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
-        store_list (list): Daftar nama toko yang akan diisi ke DataFrame.
-    """
-    session_key = f"df_{branch_name}_non_ads"
-
-    if session_key not in st.session_state:
-        # Buat DataFrame default dengan kolom yang dibutuhkan
-        data = {
-            "Tanggal": pd.Series(yesterday_in_jakarta, index=range(5)),
-            "Nominal Aktual Non Ads": None,
-            "Keterangan": None,
-        }
-        st.session_state[session_key] = pd.DataFrame(data)
-
-
-def get_non_ads_column_config():
-    """
-    Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
-    """
-    return {
-        "Tanggal": st.column_config.DateColumn(
-            "Tanggal",
-            min_value=pd.Timestamp(2023, 1, 1),
-            format="YYYY-MM-DD",
-            required=True,
-        ),
-        "Nominal Aktual Non Ads": st.column_config.NumberColumn(
-            "Nominal Aktual Non Ads (Rp)",
-            min_value=0.0,
-            format="accounting",
-        ),
-        "Keterangan": st.column_config.TextColumn(
-            "Keterangan",
-        ),
-    }
-
-
 # ADVERTISER DATA
 def initialize_marketplace_data_session(project_name, marketplace_list, store_list):
     """
     Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
-
-    Args:
-        project_name (str): Nama brand untuk kunci di session_state.
-        marketplace__list (list): Daftar nama marketplace yang akan diisi ke DataFrame.
-        store_list (list): Daftar nama toko yang akan diisi ke DataFrame.
     """
     session_key = f"df_{project_name}_marketplace"
 
@@ -589,7 +687,7 @@ def initialize_marketplace_data_session(project_name, marketplace_list, store_li
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                yesterday_in_jakarta,
+                YESTERDAY_IN_JAKARTA,
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -665,7 +763,7 @@ def initialize_cpas_data_session(project_name, store_list, akun_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                yesterday_in_jakarta,
+                YESTERDAY_IN_JAKARTA,
                 index=range(len(akun_list)),
             ),
             "Nama Toko": store_list,
@@ -799,13 +897,13 @@ def generate_excel_bytes(df, group_cols, value_col, aggfunc="sum"):
 def expand_sku(sku: str):
     """
     Expand SKU bundling sesuai aturan:
-    - Jika tidak ada "_", return [sku]
+    - Jika tidak ada " + ", return [sku]
     - Jika ada "_", pecah jadi beberapa produk
     """
-    if "_" not in sku:
+    if " + " not in sku:
         return [sku]
 
-    parts = sku.split("_")
+    parts = sku.split(" + ")
     prefix = parts[0].split("-")[0]  # ambil brand prefix (3 huruf pertama sebelum '-')
 
     expanded = [parts[0]]  # produk pertama utuh
@@ -817,10 +915,11 @@ def expand_sku(sku: str):
 
 def create_visual_report(report_df, original_df):
     """
-    Membuat laporan Excel yang lebih mudah dibaca secara visual
-    dengan warna, border, subtotal, dan grand total.
+    Membuat laporan Excel yang sangat detail dan mudah dibaca, dengan grouping
+    dan subtotal/grand total per hari, marketplace, dan toko untuk Jumlah PCS
+    serta Total Resi Unik.
     """
-    if report_df.empty:
+    if report_df.empty or original_df.empty:
         wb = Workbook()
         ws = wb.active
         ws.title = "Laporan Marketplace"
@@ -829,34 +928,68 @@ def create_visual_report(report_df, original_df):
         wb.save(output)
         return output.getvalue()
 
-    # Urutkan data
-    df_sorted = report_df.sort_values(
-        by=["nama_marketplace", "nama_toko", "sku"]
+    # --- 1. PRA-PEMROSESAN DATA DENGAN PANDAS ---
+    # Salin DataFrame agar tidak mengubah data asli
+    df = report_df.copy()
+    df_orig = original_df.copy()
+
+    # Pastikan ada kolom 'tanggal' berformat date
+    df["tanggal"] = pd.to_datetime(df["timestamp_input_data"]).dt.date
+    df_orig["tanggal"] = pd.to_datetime(df_orig["timestamp_input_data"]).dt.date
+
+    # a. Agregasi level paling detail: Jumlah PCS per SKU per hari
+    df_details = df.groupby(
+        ["tanggal", "nama_marketplace", "nama_toko", "sku"], as_index=False
+    ).agg(jumlah_pcs=("jumlah_item", "sum"))
+
+    # b. Agregasi Resi Unik di semua level yang dibutuhkan
+    df_resi_toko = df_orig.groupby(
+        ["tanggal", "nama_marketplace", "nama_toko"], as_index=False
+    ).agg(total_resi_unik_toko=("no_resi", "nunique"))
+
+    df_resi_marketplace = df_orig.groupby(
+        ["tanggal", "nama_marketplace"], as_index=False
+    ).agg(total_resi_unik_marketplace=("no_resi", "nunique"))
+
+    df_resi_hari = df_orig.groupby(["tanggal"], as_index=False).agg(
+        total_resi_unik_hari=("no_resi", "nunique")
+    )
+
+    # c. Gabungkan semua data menjadi satu DataFrame utama
+    df_final = pd.merge(
+        df_details,
+        df_resi_toko,
+        on=["tanggal", "nama_marketplace", "nama_toko"],
+        how="left",
+    )
+    df_final = pd.merge(
+        df_final, df_resi_marketplace, on=["tanggal", "nama_marketplace"], how="left"
+    )
+    df_final = pd.merge(df_final, df_resi_hari, on=["tanggal"], how="left")
+    df_final.fillna(0, inplace=True)  # Ganti NaN dengan 0
+
+    # d. Urutkan DataFrame (KRUSIAL untuk logika loop di bawah)
+    df_sorted = df_final.sort_values(
+        by=["tanggal", "nama_marketplace", "nama_toko", "sku"]
     ).reset_index(drop=True)
 
+    # --- 2. PERSIAPAN FILE EXCEL ---
     wb = Workbook()
     ws = wb.active
-    ws.title = "Laporan Marketplace"
+    ws.title = "Laporan Rinci Marketplace"
 
-    # --- Styles ---
-    bold_font = Font(bold=True)
-    italic_bold_font = Font(bold=True, italic=True)
-    center_align = Alignment(horizontal="center", vertical="center")
-    right_align = Alignment(horizontal="right", vertical="center")
-
+    # Styles
+    bold_font = Font(bold=True, name="Calibri")
+    italic_bold_font = Font(bold=True, italic=True, name="Calibri")
     header_fill = PatternFill(
-        start_color="BDD7EE", end_color="BDD7EE", fill_type="solid"
+        start_color="DDEBF7", end_color="DDEBF7", fill_type="solid"
     )
-    subtotal_fill = PatternFill(
-        start_color="FFF2CC", end_color="FFF2CC", fill_type="solid"
+    toko_fill = PatternFill(start_color="FDF2CC", end_color="FDF2CC", fill_type="solid")
+    mp_fill = PatternFill(start_color="F8CBAD", end_color="F8CBAD", fill_type="solid")
+    hari_fill = PatternFill(start_color="C6E0B4", end_color="C6E0B4", fill_type="solid")
+    grand_total_fill = PatternFill(
+        start_color="A9D08E", end_color="A9D08E", fill_type="solid"
     )
-    marketplace_fill = PatternFill(
-        start_color="FCE4D6", end_color="FCE4D6", fill_type="solid"
-    )
-    total_fill = PatternFill(
-        start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"
-    )
-
     thin_border = Border(
         left=Side(style="thin"),
         right=Side(style="thin"),
@@ -864,141 +997,220 @@ def create_visual_report(report_df, original_df):
         bottom=Side(style="thin"),
     )
 
-    # --- Header ---
+    # Header
     headers = [
+        "Tanggal",
         "Marketplace",
         "Nama Toko",
         "SKU",
         "Jumlah PCS",
-        "Total Resi Unik Marketplace",
+        "Resi Unik Toko",
+        "Resi Unik Marketplace",
+        "Resi Unik per Tanggal",
     ]
     ws.append(headers)
     for cell in ws[1]:
         cell.font = bold_font
-        cell.alignment = center_align
         cell.fill = header_fill
         cell.border = thin_border
 
-    # --- Variabel Pelacak ---
-    marketplace_start_row, toko_start_row = 2, 2
-    marketplace_pcs_subtotal, toko_pcs_subtotal = 0, 0
-    prev_marketplace, prev_toko = None, None
+    # --- 3. LOOPING & PENULISAN KE EXCEL ---
+    # Variabel pelacak status & akumulator total
+    prev = {"toko": None, "mp": None, "tgl": None}
+    total = {"toko": 0, "mp": 0, "tgl": 0}
 
-    # --- Iterasi Data ---
+    # Fungsi bantuan untuk menulis baris subtotal
+    def write_subtotal_row(label, pcs_total, resi_total, col_idx_resi, fill, font):
+        row_data = [""] * len(headers)
+        row_data[2] = label  # Kolom C untuk label
+        row_data[4] = pcs_total  # Kolom E untuk Jml PCS
+        row_data[col_idx_resi] = resi_total  # Kolom F/G/H untuk Resi
+        ws.append(row_data)
+        for cell in ws[ws.max_row]:
+            cell.fill = fill
+            cell.font = font
+            cell.border = thin_border
+
     for idx, row in df_sorted.iterrows():
-        current_row_num = ws.max_row + 1
-        if prev_marketplace is None:
-            prev_marketplace = row["nama_marketplace"]
-            prev_toko = row["nama_toko"]
+        # Cek perubahan grup dari level terbesar (tanggal) ke terkecil (toko)
+        is_new_day = prev["tgl"] and row["tanggal"] != prev["tgl"]
+        is_new_mp = prev["mp"] and row["nama_marketplace"] != prev["mp"]
+        is_new_toko = prev["toko"] and row["nama_toko"] != prev["toko"]
 
-        # Marketplace berubah
-        if row["nama_marketplace"] != prev_marketplace:
-            # Subtotal toko terakhir
-            ws.append(["", f"Subtotal {prev_toko}", "", toko_pcs_subtotal, ""])
-            for cell in ws[ws.max_row]:
-                cell.font = italic_bold_font
-                cell.fill = subtotal_fill
-                cell.border = thin_border
-
-            # Subtotal marketplace
-            ws.append(
-                [
-                    "",
-                    f"SUBTOTAL {prev_marketplace}",
-                    "",
-                    marketplace_pcs_subtotal,
-                    df_sorted.loc[idx - 1, "jumlah_resi_unik"],
-                ]
+        # Jika hari baru, tutup semua subtotal dari hari sebelumnya
+        if is_new_day:
+            prev_row = df_sorted.loc[idx - 1]
+            write_subtotal_row(
+                f"Subtotal Toko: {prev['toko']}",
+                total["toko"],
+                prev_row["total_resi_unik_toko"],
+                5,
+                toko_fill,
+                italic_bold_font,
             )
-            for cell in ws[ws.max_row]:
-                cell.font = bold_font
-                cell.fill = marketplace_fill
-                cell.border = thin_border
+            write_subtotal_row(
+                f"Subtotal Marketplace: {prev['mp']}",
+                total["mp"],
+                prev_row["total_resi_unik_marketplace"],
+                6,
+                mp_fill,
+                bold_font,
+            )
+            write_subtotal_row(
+                f"GRAND TOTAL TANGGAL: {prev['tgl']}",
+                total["tgl"],
+                prev_row["total_resi_unik_hari"],
+                7,
+                hari_fill,
+                bold_font,
+            )
+            ws.append([])  # Baris kosong pemisah hari
+            total = {"toko": 0, "mp": 0, "tgl": 0}
 
-            ws.append([])  # baris kosong
+        # Jika marketplace baru (di hari yang sama)
+        elif is_new_mp:
+            prev_row = df_sorted.loc[idx - 1]
+            write_subtotal_row(
+                f"Subtotal Toko: {prev['toko']}",
+                total["toko"],
+                prev_row["total_resi_unik_toko"],
+                5,
+                toko_fill,
+                italic_bold_font,
+            )
+            write_subtotal_row(
+                f"Subtotal Marketplace: {prev['mp']}",
+                total["mp"],
+                prev_row["total_resi_unik_marketplace"],
+                6,
+                mp_fill,
+                bold_font,
+            )
+            ws.append([])  # Baris kosong pemisah marketplace
+            total["toko"], total["mp"] = 0, 0
 
-            # Reset
-            marketplace_pcs_subtotal, toko_pcs_subtotal = 0, 0
-            prev_marketplace, prev_toko = row["nama_marketplace"], row["nama_toko"]
+        # Jika hanya toko yang baru (di marketplace & hari yang sama)
+        elif is_new_toko:
+            prev_row = df_sorted.loc[idx - 1]
+            write_subtotal_row(
+                f"Subtotal Toko: {prev['toko']}",
+                total["toko"],
+                prev_row["total_resi_unik_toko"],
+                5,
+                toko_fill,
+                italic_bold_font,
+            )
+            total["toko"] = 0
 
-        # Toko berubah
-        elif row["nama_toko"] != prev_toko:
-            ws.append(["", f"Subtotal {prev_toko}", "", toko_pcs_subtotal, ""])
-            for cell in ws[ws.max_row]:
-                cell.font = italic_bold_font
-                cell.fill = subtotal_fill
-                cell.border = thin_border
-
-            ws.append([])  # baris kosong antar toko
-
-            toko_pcs_subtotal = 0
-            prev_toko = row["nama_toko"]
-
-        # Tulis data SKU
+        # Tulis baris data detail
         ws.append(
             [
-                row["nama_marketplace"],
-                row["nama_toko"],
+                row["tanggal"] if row["tanggal"] != prev["tgl"] else "",
+                row["nama_marketplace"]
+                if row["nama_marketplace"] != prev["mp"]
+                else "",
+                row["nama_toko"] if row["nama_toko"] != prev["toko"] else "",
                 row["sku"],
                 row["jumlah_pcs"],
                 "",
+                "",
+                "",  # Resi unik hanya diisi di subtotal
             ]
         )
         for cell in ws[ws.max_row]:
             cell.border = thin_border
-        ws[ws.max_row][3].alignment = right_align
 
-        marketplace_pcs_subtotal += row["jumlah_pcs"]
-        toko_pcs_subtotal += row["jumlah_pcs"]
+        # Akumulasi total
+        total["toko"] += row["jumlah_pcs"]
+        total["mp"] += row["jumlah_pcs"]
+        total["tgl"] += row["jumlah_pcs"]
 
-    # --- Akhiri dengan subtotal terakhir ---
-    ws.append(["", f"Subtotal {prev_toko}", "", toko_pcs_subtotal, ""])
-    for cell in ws[ws.max_row]:
-        cell.font = italic_bold_font
-        cell.fill = subtotal_fill
-        cell.border = thin_border
+        # Update pelacak
+        prev = {
+            "toko": row["nama_toko"],
+            "mp": row["nama_marketplace"],
+            "tgl": row["tanggal"],
+        }
 
-    ws.append(
-        [
-            "",
-            f"SUBTOTAL {prev_marketplace}",
-            "",
-            marketplace_pcs_subtotal,
-            df_sorted.iloc[-1]["jumlah_resi_unik"],
-        ]
-    )
-    for cell in ws[ws.max_row]:
-        cell.font = bold_font
-        cell.fill = marketplace_fill
-        cell.border = thin_border
+    # --- Tulis Subtotal TERAKHIR setelah loop selesai ---
+    if prev["tgl"]:
+        last_row = df_sorted.iloc[-1]
+        write_subtotal_row(
+            f"Subtotal Toko: {prev['toko']}",
+            total["toko"],
+            last_row["total_resi_unik_toko"],
+            5,
+            toko_fill,
+            italic_bold_font,
+        )
+        write_subtotal_row(
+            f"Subtotal Marketplace: {prev['mp']}",
+            total["mp"],
+            last_row["total_resi_unik_marketplace"],
+            6,
+            mp_fill,
+            bold_font,
+        )
+        write_subtotal_row(
+            f"GRAND TOTAL TANGGAL: {prev['tgl']}",
+            total["tgl"],
+            last_row["total_resi_unik_hari"],
+            7,
+            hari_fill,
+            bold_font,
+        )
 
+    # --- Tulis Grand Total Keseluruhan ---
     ws.append([])
-
-    # --- Grand Total ---
     grand_total_pcs = df_sorted["jumlah_pcs"].sum()
-    grand_total_resi_unik = original_df["no_resi"].nunique()
-    ws.append(["GRAND TOTAL", "", "", grand_total_pcs, grand_total_resi_unik])
-    for cell in ws[ws.max_row]:
-        cell.font = bold_font
-        cell.fill = total_fill
-        cell.border = thin_border
-
-    ws.merge_cells(
-        start_row=ws.max_row, start_column=1, end_row=ws.max_row, end_column=2
+    grand_total_resi = df_orig["no_resi"].nunique()
+    write_subtotal_row(
+        "GRAND TOTAL KESELURUHAN",
+        grand_total_pcs,
+        grand_total_resi,
+        7,
+        grand_total_fill,
+        bold_font,
     )
 
-    # --- Auto Width Columns ---
+    # --- 4. FORMATTING AKHIR ---
     for col in ws.columns:
         max_length = 0
         column_letter = get_column_letter(col[0].column)
         for cell in col:
-            try:
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            except:
-                pass
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
         ws.column_dimensions[column_letter].width = max_length + 2
 
+    # Simpan ke memori
     output = io.BytesIO()
     wb.save(output)
     return output.getvalue()
+
+
+def parse_bundle_pcs(row):
+    sku = row.iloc[0]  # kolom pertama (sku)
+    qty = row.iloc[1]  # kolom kedua (jumlah_item)
+
+    match = re.search(
+        r"-(\d+)-(PCS|BOX|PAK|PACK|BTL|LTR|KG)$", sku, flags=re.IGNORECASE
+    )
+    if match:
+        jumlah_bundle = int(match.group(1))
+        qty = qty * jumlah_bundle
+        sku = re.sub(
+            r"-(\d+)-(PCS|BOX|PAK|PACK|BTL|LTR|KG)$", "", sku, flags=re.IGNORECASE
+        )
+    return pd.Series([sku, qty])
+
+
+def get_quarter_months(month: int):
+    """Helper: menentukan bulan dalam kuartal"""
+    if month in [1, 2, 3]:
+        return ["January", "February", "March"], 1
+    elif month in [4, 5, 6]:
+        return ["April", "May", "June"], 2
+    elif month in [7, 8, 9]:
+        return ["July", "August", "September"], 3
+    else:
+        return ["October", "November", "December"], 4

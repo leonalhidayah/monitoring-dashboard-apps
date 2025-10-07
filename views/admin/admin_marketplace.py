@@ -1,39 +1,25 @@
 import datetime
+import re
 import warnings
 
 import pandas as pd
-import pytz
 import streamlit as st
 
-from data_preprocessor import utils
+from data_preprocessor.utils import add_new_columns, clean_admin_marketplace_data
 from database import db_manager
+from views.config import NOW_IN_JAKARTA
+from views.style import load_css
 
 warnings.filterwarnings("ignore")
 
-st.set_page_config(layout="wide")
-st.title("Data Entry Harian Admin")
+load_css()
 
-
-st.markdown(
-    """
-    <style>
-    button[data-baseweb="tab"] {
-        font-size: 18px;
-        width: 100%;
-        justify-content: center !important;  /* Pusatkan teks */
-        text-align: center !important;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
+st.header("Data Entry Harian Admin Marketplace")
 
 (
     admin_marketplace_tab,
-    admin_regular_tab,
-    admin_mp_return_tab,
-    admin_reg_return_tab,
-) = st.tabs(["Marketplace", "Regular", "Return MP", "Return REG"])
+    pesanan_khusus_marketplace_page,
+) = st.tabs(["Marketplace", "Pesanan Khusus"])
 
 with admin_marketplace_tab:
     st.subheader("Unggah Data Admin Marketplace")
@@ -56,16 +42,12 @@ with admin_marketplace_tab:
 
             st.info("File berhasil diunggah. Silakan lengkapi data di bawah ini.")
 
-            # Pilihan tanggal dan waktu input
-            jakarta_tz = pytz.timezone("Asia/Jakarta")
-            now_in_jakarta = datetime.datetime.now(jakarta_tz)
-
             # Simpan default ke session_state hanya sekali
             if "selected_date" not in st.session_state:
-                st.session_state.selected_date = now_in_jakarta.date()
+                st.session_state.selected_date = NOW_IN_JAKARTA.date()
 
             if "selected_time" not in st.session_state:
-                st.session_state.selected_time = now_in_jakarta.time()
+                st.session_state.selected_time = NOW_IN_JAKARTA.time()
 
             selected_date = st.date_input(
                 "Pilih tanggal input",
@@ -93,10 +75,10 @@ with admin_marketplace_tab:
 
                 # Panggil fungsi pembersihan dari utils
                 # Diasumsikan df_raw sudah ada dari file upload
-                df_clean = utils.clean_admin_marketplace_data(df_raw)
+                df_clean = clean_admin_marketplace_data(df_raw)
 
                 # Panggil fungsi penambahan kolom baru
-                df_final = utils.add_new_columns(df_clean)
+                df_final = add_new_columns(df_clean)
 
                 # Gabungkan tanggal dan waktu yang dipilih pengguna untuk membuat timestamp
                 timestamp_input = datetime.datetime.combine(
@@ -518,32 +500,40 @@ with admin_marketplace_tab:
             st.error(f"Terjadi error saat memproses file: {e}")
             st.warning("Pastikan format file sesuai dengan template BigSeller.")
 
-with admin_regular_tab:
-    st.subheader("Unggah Data Admin Regular")
-    st.info("Fitur ini akan diimplementasikan di kemudian hari.")
-    # TODO: Logika untuk admin regular akan ditambahkan di sini.
 
-with admin_mp_return_tab:
-    st.subheader("Input Data Retur")
-    with st.form("retur_form"):
-        tanggal_retur = st.date_input("Tanggal Retur")
-        st.markdown(
-            "Masukkan Order ID yang diretur, pisahkan dengan koma atau baris baru."
+with pesanan_khusus_marketplace_page:
+    st.subheader("Input Manual Pesanan Khusus")
+
+    with st.form("special_order_form"):
+        tanggal_input = st.date_input("Tanggal Input", value=NOW_IN_JAKARTA)
+        kategori_pesanan = st.selectbox(
+            "Pilih Kategori Pesanan",
+            ("RETURN", "FIKTIF_ORDER", "AFFILIATE", "CANCEL", "LAINNYA"),
         )
         order_ids_input = st.text_area("Order ID", height=150)
+        submit_button = st.form_submit_button("Simpan Data")
 
-        submit_retur_button = st.form_submit_button("Simpan Data Retur")
-
-        if submit_retur_button:
+        if submit_button:
             if order_ids_input:
-                # Memproses input teks menjadi list of strings
                 order_ids = [
-                    oid.strip() for oid in order_ids_input.split() if oid.strip()
+                    oid.strip()
+                    for oid in re.split(r"[\s,]+", order_ids_input)
+                    if oid.strip()
                 ]
 
-                if db_manager.insert_returns_batch(tanggal_retur, order_ids):
-                    st.success(f"✅ {len(order_ids)} data retur berhasil disimpan!")
-                else:
-                    st.error("❌ Gagal menyimpan data retur.")
+                try:
+                    if db_manager.insert_order_flags_batch(
+                        tanggal_input, kategori_pesanan, order_ids
+                    ):
+                        st.success(
+                            f"Data untuk kategori '{kategori_pesanan}' berhasil disimpan!"
+                        )
+                    else:
+                        st.error(
+                            "Gagal menyimpan data. Cek log server untuk detail error."
+                        )
+                except Exception as e:
+                    st.error(f"Terjadi kesalahan: {e}")
+
             else:
-                st.warning("Order ID tidak boleh kosong.")
+                st.warning("Input Order ID tidak boleh kosong.")

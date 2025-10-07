@@ -1,0 +1,252 @@
+from datetime import datetime
+
+import streamlit as st
+
+from data_preprocessor.utils import (
+    get_ads_column_config,
+    get_ads_reg_column_config,
+    get_finance_cpas_column_config,
+    initialize__ads_reg_data_session,
+    initialize_ads_data_session,
+    initialize_finance_cpas_data_session,
+)
+from database.db_manager import (
+    insert_budget_ads_data,
+    insert_budget_reg_ads_data,
+    insert_finance_cpas_data,
+)
+from views.config import ADV_CPAS_MAP_PROJECT, ADV_MP_MAP_PROJECT
+from views.style import load_css
+
+load_css()
+
+st.header("Budgeting Ads")
+
+mp_tab, cpas_tab, reg_tab = st.tabs(["Marketplace", "CPAS", "SosCom"])
+with mp_tab:
+    # Membuat tab secara dinamis
+    tab_names = list(ADV_MP_MAP_PROJECT.keys())
+    tabs = st.tabs(tab_names)
+
+    for i, project_name in enumerate(tab_names):
+        with tabs[i]:
+            df_key = f"df_{project_name.lower().replace(' ', '_')}_ads"
+            preview_key = f"show_preview_{project_name.lower().replace(' ', '_')}_ads"
+
+            # Inisialisasi DataFrame
+            initialize_ads_data_session(
+                project_name.lower().replace(" ", "_"),
+                ADV_MP_MAP_PROJECT[project_name]["Marketplace"],
+                ADV_MP_MAP_PROJECT[project_name]["Nama Toko"],
+            )
+
+            # Form untuk input & pratinjau
+            with st.form(f"form_{project_name.lower().replace(' ', '_')}_ads"):
+                # Data editor → hasilnya langsung overwrite ke session_state
+                st.session_state[df_key] = st.data_editor(
+                    st.session_state[df_key],
+                    num_rows="dynamic",
+                    width="stretch",
+                    column_config=get_ads_column_config(
+                        ADV_MP_MAP_PROJECT[project_name]["Nama Toko"]
+                    ),
+                )
+
+                st.write("Tekan tombol di bawah untuk pratinjau dan menyimpan data.")
+                submitted = st.form_submit_button("Simpan & Pratinjau")
+
+                if submitted:
+                    st.session_state[preview_key] = True
+
+            # Tampilkan pratinjau setelah submit
+            if st.session_state.get(preview_key, False):
+                cleaned_df = st.session_state[df_key].dropna(how="all")
+                if not cleaned_df.empty:
+                    st.markdown("---")
+                    st.subheader(
+                        f"Pratinjau Data untuk {project_name}_{datetime.today().strftime('%d-%M-%Y %H:%M:%S')}"
+                    )
+                    st.write("Silakan cek kembali data Anda sebelum disimpan permanen.")
+
+                    st.dataframe(
+                        cleaned_df,
+                        width="stretch",
+                        column_config=get_ads_column_config(
+                            ADV_MP_MAP_PROJECT[project_name]["Nama Toko"]
+                        ),
+                    )
+
+                    button_cols = st.columns([8, 10, 3])
+                    with button_cols[0]:
+                        if st.button(
+                            "Ya, Simpan ke Database",
+                            key=f"save_button_{project_name.lower().replace(' ', '_')}_ads",
+                        ):
+                            result = insert_budget_ads_data(cleaned_df)
+                            if result["status"] == "success":
+                                st.success(result["message"])
+                                st.session_state[preview_key] = False
+                            else:
+                                st.error(
+                                    f"Gagal menyimpan data omset {project_name}: {result['message']}"
+                                )
+                    with button_cols[2]:
+                        if st.button(
+                            "OMG, Ada yg slh",
+                            key=f"update_button_{project_name.lower().replace(' ', '_')}_ads",
+                        ):
+                            st.session_state[preview_key] = False
+                            st.rerun()
+
+                else:
+                    st.warning("Tidak ada data valid untuk disimpan.")
+
+with cpas_tab:
+    tab_names = list(ADV_CPAS_MAP_PROJECT.keys())
+    tabs = st.tabs(tab_names)
+
+    for i, project_name in enumerate(tab_names):
+        with tabs[i]:
+            df_key = f"df_{project_name.lower().replace(' ', '_')}_cpas"
+            preview_key = f"show_preview_{project_name.lower().replace(' ', '_')}_cpas"
+
+            # Inisialisasi DataFrame
+            initialize_finance_cpas_data_session(
+                project_name.lower().replace(" ", "_"),
+                ADV_CPAS_MAP_PROJECT[project_name]["Nama Toko"],
+                ADV_CPAS_MAP_PROJECT[project_name]["Akun"],
+            )
+
+            # Form untuk input & pratinjau
+            with st.form(f"form_{project_name.lower().replace(' ', '_')}"):
+                # Data editor → hasilnya langsung overwrite ke session_state
+                st.session_state[df_key] = st.data_editor(
+                    st.session_state[df_key],
+                    num_rows="dynamic",
+                    width="stretch",
+                    column_config=get_finance_cpas_column_config(
+                        ADV_CPAS_MAP_PROJECT[project_name]["Nama Toko"],
+                        ADV_CPAS_MAP_PROJECT[project_name]["Akun"],
+                    ),
+                )
+
+                st.write("Tekan tombol di bawah untuk pratinjau dan menyimpan data.")
+                submitted = st.form_submit_button("Simpan & Pratinjau")
+
+                if submitted:
+                    st.session_state[preview_key] = True
+
+            # Tampilkan pratinjau setelah submit
+            if st.session_state.get(preview_key, False):
+                cleaned_df = st.session_state[df_key].dropna(how="all")
+                if not cleaned_df.empty:
+                    st.markdown("---")
+                    st.subheader(
+                        f"Pratinjau Data untuk {project_name}_{datetime.today().strftime('%d-%M-%Y %H:%M:%S')}"
+                    )
+                    st.write("Silakan cek kembali data Anda sebelum disimpan permanen.")
+
+                    st.dataframe(
+                        cleaned_df,
+                        width="stretch",
+                        column_config=get_finance_cpas_column_config(
+                            ADV_CPAS_MAP_PROJECT[project_name]["Nama Toko"],
+                            ADV_CPAS_MAP_PROJECT[project_name]["Akun"],
+                        ),
+                    )
+
+                    button_cols = st.columns([8, 3, 1.9])
+                    with button_cols[0]:
+                        if st.button(
+                            "Ya, Simpan ke Database",
+                            key=f"save_button_{project_name.lower().replace(' ', '_')}_cpas",
+                        ):
+                            result = insert_finance_cpas_data(cleaned_df)
+                            if result["status"] == "success":
+                                st.success(result["message"])
+                                st.session_state[preview_key] = False
+                            else:
+                                st.error(
+                                    f"Gagal menyimpan data omset {project_name}: {result['message']}"
+                                )
+                    with button_cols[2]:
+                        if st.button(
+                            "OMG, Ada yg slhhhh",
+                            key=f"update_button_{project_name.lower().replace(' ', '_')}_cpas",
+                        ):
+                            st.session_state[preview_key] = False
+                            st.rerun()
+
+                else:
+                    st.warning("Tidak ada data valid untuk disimpan.")
+
+with reg_tab:
+    # tab_names = list(["Sadewa", "Lainnya"])
+    # tabs = st.tabs(tab_names)
+
+    # for i, branch_name in enumerate(tab_names):
+    #     with tabs[i]:
+    branch_name = "Sadewa"
+
+    df_key = f"df_{branch_name.lower().replace(' ', '_')}_reg_ads"
+    preview_key = f"show_preview_{branch_name.lower().replace(' ', '_')}_reg_ads"
+
+    # Inisialisasi DataFrame
+    initialize__ads_reg_data_session(branch_name.lower().replace(" ", "_"))
+
+    # Form untuk input & pratinjau
+    with st.form(f"form_{branch_name.lower().replace(' ', '_')}_reg_ads"):
+        # Data editor → hasilnya langsung overwrite ke session_state
+        st.session_state[df_key] = st.data_editor(
+            st.session_state[df_key],
+            num_rows="dynamic",
+            width="stretch",
+            column_config=get_ads_reg_column_config(),
+        )
+
+        st.write("Tekan tombol di bawah untuk pratinjau dan menyimpan data.")
+        submitted = st.form_submit_button("Simpan & Pratinjau")
+
+        if submitted:
+            st.session_state[preview_key] = True
+
+    # Tampilkan pratinjau setelah submit
+    if st.session_state.get(preview_key, False):
+        cleaned_df = st.session_state[df_key].dropna(how="all")
+        if not cleaned_df.empty:
+            st.markdown("---")
+            st.subheader(
+                f"Pratinjau Data untuk {branch_name}_{datetime.today().strftime('%d-%M-%Y %H:%M:%S')}"
+            )
+            st.write("Silakan cek kembali data Anda sebelum disimpan permanen.")
+
+            st.dataframe(
+                cleaned_df,
+                width="stretch",
+                column_config=get_ads_reg_column_config(),
+            )
+
+            button_cols = st.columns([8, 10, 3])
+            with button_cols[0]:
+                if st.button(
+                    "Ya, Simpan ke Database",
+                    key=f"save_button_{branch_name.lower().replace(' ', '_')}_reg_ads",
+                ):
+                    result = insert_budget_reg_ads_data(cleaned_df)
+                    if result["status"] == "success":
+                        st.success(result["message"])
+                        st.session_state[preview_key] = False
+                    else:
+                        st.error(
+                            f"Gagal menyimpan data omset {branch_name}: {result['message']}"
+                        )
+            with button_cols[2]:
+                if st.button(
+                    "OMG, Ada yg slh",
+                    key=f"update_button_{branch_name.lower().replace(' ', '_')}_reg_ads",
+                ):
+                    st.session_state[preview_key] = False
+                    st.rerun()
+
+        else:
+            st.warning("Tidak ada data valid untuk disimpan.")

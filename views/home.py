@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(layout="centered", page_icon="assets/ams-icon-crop.png")
+st.set_page_config(page_icon="assets/ams-icon-crop.png")
 
 display_name = st.session_state.get("name", "Guest")
 

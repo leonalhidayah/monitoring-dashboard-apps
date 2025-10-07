@@ -5,22 +5,15 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from database import db_manager
+from data_preprocessor.utils import get_quarter_months
 from database.db_connection import get_connection
+from database.db_manager import (
+    get_financial_summary,
+    get_payments,
+    get_vw_budget_ads_monitoring,
+)
 
 project_root = Path.cwd()
-
-
-def get_quarter_months(month: int):
-    """Helper: menentukan bulan dalam kuartal"""
-    if month in [1, 2, 3]:
-        return ["January", "February", "March"], 1
-    elif month in [4, 5, 6]:
-        return ["April", "May", "June"], 2
-    elif month in [7, 8, 9]:
-        return ["July", "August", "September"], 3
-    else:
-        return ["October", "November", "December"], 4
 
 
 st.header("Aktualisasi Budget Plan (Per Kuartal)")
@@ -49,7 +42,7 @@ total_omset = df_omset["total_omset"].iloc[0]
 st.markdown(f"**Total Omset Aktualisasi:** Rp {total_omset:,.0f}")
 st.markdown(f"**Total Omset Bulanan (per bulan):** Rp {(total_omset / 3):,.0f}")
 
-df_monitoring_budget_ads = db_manager.get_vw_budget_ads_monitoring()
+df_monitoring_budget_ads = get_vw_budget_ads_monitoring()
 df_monitoring_budget_ads["nominal_aktual_ads"].fillna(0, inplace=True)
 df_monitoring_budget_ads["status"] = np.where(
     df_monitoring_budget_ads["nominal_aktual_ads"]
@@ -63,9 +56,12 @@ df_monitoring_budget_ads = df_monitoring_budget_ads.merge(
 )
 st.dataframe(df_monitoring_budget_ads)
 
-df_payments = db_manager.get_payments()
+df_payments = get_payments()
 st.dataframe(df_payments)
 
 st.metric(
     label="Estimasi Omset dari Total Pesanan", value=df_payments["total_pesanan"].sum()
 )
+
+df_finance_summary = get_financial_summary(1, "01-10-2025", "05-10-2025")
+st.dataframe(df_finance_summary)
