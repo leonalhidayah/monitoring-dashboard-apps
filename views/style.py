@@ -15,3 +15,7 @@ def load_css():
         """,
         unsafe_allow_html=True,
     )
+
+
+def format_rupiah(x):
+    return f"Rp {x:,.0f}"

@@ -374,13 +374,13 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
 
             if rasio_ads_overall < safe_zone_start:
                 status_text = "Under"
-                bar_color = "red"
+                bar_color = "tomato"
             elif safe_zone_start <= rasio_ads_overall <= target_rasio:
                 status_text = "Normal"
                 bar_color = "green"
             else:
                 status_text = "Over"
-                bar_color = "red"
+                bar_color = "tomato"
 
             df_ads["target_rasio"] = target_rasio
             conditions = [
@@ -442,6 +442,23 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
                 label="📊 Rasio Ads/Omset",
                 value=f"{rasio_ads_overall:.2f} %",
             )
+
+        st.divider()
+
+        st.subheader("Total Omset Berjalan vs Ads Spend")
+
+        df_omset_daily = (
+            df_ads.groupby(["tanggal"])[["total_omset", "total_spending"]]
+            .sum()
+            .rename(
+                columns={
+                    "total_omset": "Total Omset Berjalan",
+                    "total_spending": "Total Ads Spending",
+                }
+            )
+        )
+
+        st.line_chart(df_omset_daily)
 
         st.divider()
 

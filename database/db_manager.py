@@ -1,6 +1,7 @@
 import logging
 import warnings
 from datetime import date
+from typing import List
 
 import pandas as pd
 import psycopg2
@@ -283,6 +284,40 @@ def get_total_sales_target(project_id: int, start_date: str, end_date: str):
     finally:
         if conn:
             conn.close()
+
+
+def get_marketing_ads_ratio(project_name, start_date, end_date):
+    query = """
+        SELECT 
+            fbp.project_id,
+            dp.project_name,
+            fbp.tahun,
+            fbp.kuartal,
+            fbp.bulan,
+            fbp.parameter_name,
+            fbp.target_rasio_persen
+        FROM finance_budget_plan fbp
+        JOIN dim_projects dp ON fbp.project_id = dp.project_id
+        WHERE 
+            dp.project_name = %(project_name)s
+            AND fbp.parameter_name = 'Biaya Marketing (Ads)'
+            AND (
+                TO_DATE(fbp.bulan || ' ' || fbp.tahun, 'Month YYYY')
+                BETWEEN %(start_date)s AND %(end_date)s
+            )
+    """
+    conn = get_connection()
+    df = pd.read_sql(
+        query,
+        conn,
+        params={
+            "project_name": project_name,
+            "start_date": start_date,
+            "end_date": end_date,
+        },
+    )
+    conn.close()
+    return df
 
 
 def insert_new_stores(df_new_stores: pd.DataFrame):
@@ -1598,3 +1633,59 @@ def update_table(table_name, data_list, pk_cols):
     conn.commit()
     cur.close()
     conn.close()
+
+
+def get_budget_ads_summary_by_project(project_name, start_date=None, end_date=None):
+    """
+    Mengambil data summary budget ads dari view vw_budget_ads_summary.
+
+    Args:
+        db_params (Dict[str, str]): Parameter koneksi database.
+        project_name (str): Nama project yang ingin difilter.
+        start_date (Optional[date]): Tanggal mulai untuk filter (inklusif).
+        end_date (Optional[date]): Tanggal akhir untuk filter (inklusif).
+
+    Returns:
+        Optional[pd.DataFrame]: DataFrame berisi hasil query, atau None jika error.
+    """
+    conn = None
+    try:
+        # Membuat koneksi ke database PostgreSQL
+        conn = get_connection()
+
+        # Membangun query secara dinamis dan aman
+        params = {"p_name": project_name}
+        where_clauses: List[str] = ["project_name = %(p_name)s"]
+
+        if start_date:
+            where_clauses.append("tanggal >= %(s_date)s")
+            params["s_date"] = start_date
+
+        if end_date:
+            where_clauses.append("tanggal <= %(e_date)s")
+            params["e_date"] = end_date
+
+        where_sql = " AND ".join(where_clauses)
+
+        sql_query = f"""
+            SELECT *
+            FROM vw_budget_ads_summary
+            WHERE {where_sql}
+            ORDER BY tanggal;
+        """
+
+        # Menjalankan query dan mengambil data ke DataFrame
+        print(f"Executing query for project '{project_name}'...")
+        df = pd.read_sql(sql_query, conn, params=params)
+
+        return df
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error: {error}")
+        return None
+
+    finally:
+        # Memastikan koneksi selalu ditutup
+        if conn is not None:
+            conn.close()
+            print("Database connection closed.")
