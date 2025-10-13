@@ -10,140 +10,214 @@ st.set_page_config(
 
 # 2. DEFINISI SEMUA HALAMAN APLIKASI
 # ==============================================================================
-# Halaman Umum
 home_page = st.Page(
     "views/home.py", title="Hi There!", icon=":material/home:", default=True
 )
 
 # Halaman Fungsional (Finance, Admin, Stock)
 finance_pages = {
-    "dashboard_new": st.Page(
-        "views/dashboard/finance_new.py", title="Finance Dashboard New"
+    "dashboard": st.Page(
+        "views/dashboard/finance.py",
+        title="Dashboard Finance",
+        icon=":material/dashboard:",
     ),
-    "dashboard": st.Page("views/dashboard/finance.py", title="Finance Dashboard"),
-    "budget_plan": st.Page("views/finance/budget_plan.py", title="Budget Plan"),
-    "omset": st.Page("views/finance/omset.py", title="Omset"),
-    "budget_ads": st.Page("views/finance/budget_ads.py", title="Budget Ads"),
+    "budget_plan": st.Page(
+        "views/finance/budget_plan.py",
+        title="Budget Plan",
+        icon=":material/finance_mode:",
+    ),
+    "omset": st.Page(
+        "views/finance/omset.py",
+        title="Omset",
+        icon=":material/money_bag:",
+    ),
+    "budget_ads": st.Page(
+        "views/finance/budget_ads.py",
+        title="Budget Ads",
+        icon=":material/campaign:",
+    ),
     "budget_non_ads": st.Page(
-        "views/finance/budget_non_ads.py", title="Budget Non Ads"
+        "views/finance/budget_non_ads.py",
+        title="Budget Non Ads",
+        icon=":material/campaign:",
     ),
-    "cashflow": st.Page("views/finance/cashflow.py", title="Cashflow"),
+    "cashflow": st.Page(
+        "views/finance/cashflow.py",
+        title="Cashflow",
+        icon=":material/account_balance_wallet:",
+    ),
 }
 admin_pages = {
     "marketplace": st.Page(
-        "views/admin/admin_marketplace.py", title="Admin Marketplace General"
+        "views/admin/admin_marketplace.py",
+        title="Admin Marketplace",
+        icon=":material/contacts_product:",
     ),
 }
-# stock_pages = {
-#     "entry": st.Page("views/data_entry_stock.py", title="Entry Data Stock"),
-#     # TODO: Definisikan halaman-halaman stok lainnya di sini jika ada
-# }
 
-# PETA HALAMAN PER PROYEK (Struktur data utama untuk menu dinamis)
+# --- HALAMAN BARU UNTUK JALUR REGULAR ---
+regular_pages = {
+    "entry_zyy_juw": st.Page(
+        "views/regular/zyy_juw_regular.py",
+        title="Entry ZYY x Juw",
+        icon=":material/campaign:",
+    ),
+    "entry_enz_kdk": st.Page(
+        "views/regular/enz_kdk_regular.py",
+        title="Entry ENZ x KDK",
+        icon=":material/campaign:",
+    ),
+    "return": st.Page(
+        "views/regular/order_flag_reg_editor.py",
+        title="Entry Return",
+        icon=":material/assignment_return:",
+    ),
+    "dashboard": st.Page(
+        "views/regular/dashboard_regular.py",
+        title="Dashboard ADV & CS",
+        icon=":material/dashboard:",
+    ),
+    "dashboard_budget": st.Page(
+        "views/regular/dashboard_budgeting_reg.py",
+        title="Dashboard Budgeting",
+        icon=":material/dashboard:",
+    ),
+}
+
+# PETA HALAMAN PER PROYEK (Marketplace)
 PROJECT_PAGE_MAP = {
     "Zhi Yang Yao": {
         "entry_adv": st.Page(
-            "views/advertiser/zyy_advertiser.py", title="Entry Advertiser"
+            "views/advertiser/zyy_advertiser.py",
+            title="Entry Advertiser",
+            icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
             "views/dashboard/project_zyy/dashboard_budgeting_zyy.py",
             title="Dashboard Budgeting",
+            icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
             "views/dashboard/project_zyy/dashboard_advertiser_zyy.py",
             title="Dashboard Advertiser",
+            icon=":material/ad_group:",
         ),
         "dash_admin": st.Page(
             "views/dashboard/project_zyy/dashboard_admin_zyy.py",
             title="Dashboard Admin",
+            icon=":material/credit_card_heart:",
         ),
     },
     "Juwara Herbal": {
         "entry_adv": st.Page(
-            "views/advertiser/juw_advertiser.py", title="Entry Advertiser"
+            "views/advertiser/juw_advertiser.py",
+            title="Entry Advertiser",
+            icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
             "views/dashboard/project_juw/dashboard_budgeting_juw.py",
             title="Dashboard Budgeting",
+            icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
             "views/dashboard/project_juw/dashboard_advertiser_juw.py",
             title="Dashboard Advertiser",
+            icon=":material/ad_group:",
         ),
         "dash_admin": st.Page(
             "views/dashboard/project_juw/dashboard_admin_juw.py",
             title="Dashboard Admin",
+            icon=":material/credit_card_heart:",
         ),
     },
     "Enzhico": {
         "entry_adv": st.Page(
-            "views/advertiser/enz_advertiser.py", title="Entry Advertiser"
+            "views/advertiser/enz_advertiser.py",
+            title="Entry Advertiser",
+            icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
             "views/dashboard/project_enz/dashboard_budgeting_enz.py",
             title="Dashboard Budgeting",
+            icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
             "views/dashboard/project_enz/dashboard_advertiser_enz.py",
             title="Dashboard Advertiser",
+            icon=":material/ad_group:",
         ),
         "dash_admin": st.Page(
             "views/dashboard/project_enz/dashboard_admin_enz.py",
             title="Dashboard Admin",
+            icon=":material/credit_card_heart:",
         ),
     },
     "Kudaku": {
         "entry_adv": st.Page(
-            "views/advertiser/kdk_advertiser.py", title="Entry Advertiser"
+            "views/advertiser/kdk_advertiser.py",
+            title="Entry Advertiser",
+            icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
             "views/dashboard/project_kdk/dashboard_budgeting_kdk.py",
             title="Dashboard Budgeting",
+            icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
             "views/dashboard/project_kdk/dashboard_advertiser_kdk.py",
             title="Dashboard Advertiser",
+            icon=":material/ad_group:",
         ),
         "dash_admin": st.Page(
             "views/dashboard/project_kdk/dashboard_admin_kdk.py",
             title="Dashboard Admin",
+            icon=":material/credit_card_heart:",
         ),
     },
     "Erassgo": {
         "entry_adv": st.Page(
-            "views/advertiser/era_advertiser.py", title="Entry Advertiser"
+            "views/advertiser/era_advertiser.py",
+            title="Entry Advertiser",
+            icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
             "views/dashboard/project_era/dashboard_budgeting_era.py",
             title="Dashboard Budgeting",
+            icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
             "views/dashboard/project_era/dashboard_advertiser_era.py",
             title="Dashboard Advertiser",
+            icon=":material/ad_group:",
         ),
         "dash_admin": st.Page(
             "views/dashboard/project_era/dashboard_admin_era.py",
             title="Dashboard Admin",
+            icon=":material/credit_card_heart:",
         ),
     },
     "HPI": {
         "entry_adv": st.Page(
-            "views/advertiser/hpi_advertiser.py", title="Entry Advertiser"
+            "views/advertiser/hpi_advertiser.py",
+            title="Entry Advertiser",
+            icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
             "views/dashboard/project_hpi/dashboard_budgeting_hpi.py",
             title="Dashboard Budgeting",
+            icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
             "views/dashboard/project_hpi/dashboard_advertiser_hpi.py",
             title="Dashboard Advertiser",
+            icon=":material/ad_group:",
         ),
         "dash_admin": st.Page(
             "views/dashboard/project_hpi/dashboard_admin_hpi.py",
             title="Dashboard Admin",
+            icon=":material/credit_card_heart:",
         ),
     },
-    # Tambahkan proyek lain di sini jika ada...
 }
 
 
@@ -153,16 +227,27 @@ def build_navigation_for_role(role, project_names=[]):
     """Membangun dictionary navigasi berdasarkan peran dan proyek yang diakses."""
     pages = {"Home": [home_page]}
 
-    # Peran-peran spesifik
+    # --- PERAN BARU UNTUK JALUR REGULAR ---
+    if role == "adv_cs_regular":
+        pages["Menu Regular"] = [
+            regular_pages["entry_zyy_juw"],
+            regular_pages["entry_enz_kdk"],
+            regular_pages["dashboard"],
+        ]
+        return pages
+
+    if role == "project_manager_reg":
+        pages["Menu Regular"] = list(regular_pages.values())
+        return pages
+    # --- AKHIR PENAMBAHAN PERAN BARU ---
+
+    # Peran-peran spesifik lainnya
     if role == "finance":
         pages["Finance"] = list(finance_pages.values())
         for proj_name, proj_pages in PROJECT_PAGE_MAP.items():
             pages[f"Budgeting {proj_name}"] = [proj_pages["dash_budget"]]
-
         return pages
-    # if role == "stock":
-    #     pages["Stock"] = list(stock_pages.values())
-    #     return pages
+
     if role == "admin_marketplace":
         pages["Entry Data"] = [admin_pages["marketplace"]]
         for proj_name in project_names:
@@ -171,6 +256,7 @@ def build_navigation_for_role(role, project_names=[]):
                     PROJECT_PAGE_MAP[proj_name]["dash_admin"]
                 ]
         return pages
+
     if role == "advertiser_marketplace":
         for proj_name in project_names:
             if proj_name in PROJECT_PAGE_MAP:
@@ -179,6 +265,7 @@ def build_navigation_for_role(role, project_names=[]):
                     PROJECT_PAGE_MAP[proj_name]["dash_adv"],
                 ]
         return pages
+
     if role == "project_manager":
         for proj_name in project_names:
             if proj_name in PROJECT_PAGE_MAP:
@@ -198,12 +285,14 @@ def build_navigation_for_role(role, project_names=[]):
 
     if role == "total_project_manager":
         pages["Admin"] = list(admin_pages.values())
+        pages["Project Regular"] = list(regular_pages.values())
         pages.update(all_project_pages)
         return pages
+
     if role in ["owner", "superuser"]:
         pages["Finance"] = list(finance_pages.values())
         pages["Admin"] = list(admin_pages.values())
-        # pages["Stock"] = list(stock_pages.values())
+        pages["Project Regular"] = list(regular_pages.values())
         pages.update(all_project_pages)
         return pages
 
@@ -211,6 +300,7 @@ def build_navigation_for_role(role, project_names=[]):
 
 
 # 4. FUNGSI DATABASE & AUTENTIKASI
+# (Tidak ada perubahan di bagian ini)
 # ==============================================================================
 @st.cache_data(ttl=600)
 def fetch_users_for_auth():
@@ -245,7 +335,6 @@ def get_user_details(username):
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        # Menggunakan dim_projects sebagai nama tabel proyek Anda
         query = """
             SELECT r.name as role_name, p.project_name as project_name
             FROM users u
@@ -256,16 +345,12 @@ def get_user_details(username):
         """
         cursor.execute(query, (username,))
         results = cursor.fetchall()
-
         if not results:
             return None, []
-
         user_role = results[0][0].strip().lower()
-        # Mengambil nama proyek dari hasil query dan memastikan unik
         accessible_projects = sorted(
             list({res[1] for res in results if res[1] is not None})
         )
-
         return user_role, accessible_projects
     except Exception as e:
         st.error(f"Gagal mengambil detail hak akses: {e}")
@@ -277,6 +362,9 @@ def get_user_details(username):
             conn.close()
 
 
+# 5. LOGIKA UTAMA APLIKASI
+# (Tidak ada perubahan di bagian ini)
+# ==============================================================================
 credentials = fetch_users_for_auth()
 authenticator = stauth.Authenticate(
     credentials,
@@ -285,38 +373,29 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=st.secrets["cookie"]["expiry"],
 )
 
-# 5. LOGIKA UTAMA APLIKASI
-# ==============================================================================
 _, col, _ = st.columns([1, 1.5, 1])
 with col:
     authenticator.login()
 
 if st.session_state["authentication_status"]:
     user_role, accessible_projects = get_user_details(st.session_state["username"])
-
     if user_role:
-        # Menyimpan detail ke session_state agar bisa diakses di halaman lain
         st.session_state["role"] = user_role
         st.session_state["accessible_projects"] = accessible_projects
-
         nav_pages = build_navigation_for_role(user_role, accessible_projects)
-
         st.logo("assets/ams-logo-white-crop.PNG")
         with st.sidebar:
             st.text("Made with ❤️ by AMS Corp.")
             authenticator.logout("Logout", "sidebar")
-
         pg = st.navigation(nav_pages)
         pg.run()
     else:
         st.error("Gagal mendapatkan peran (role) untuk pengguna ini. Hubungi admin.")
         authenticator.logout("Logout", "main")
-
 elif st.session_state["authentication_status"] is False:
     _, col, _ = st.columns([1, 1.5, 1])
     with col:
         st.error("Username atau password salah!")
-
 elif st.session_state["authentication_status"] is None:
     _, col, _ = st.columns([1, 1.5, 1])
     with col:

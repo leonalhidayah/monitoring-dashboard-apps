@@ -7,8 +7,10 @@ import streamlit as st
 
 from data_preprocessor.utils import add_new_columns, clean_admin_marketplace_data
 from database import db_manager
-from views.config import NOW_IN_JAKARTA
+from views.config import get_now_in_jakarta
 from views.style import load_css
+
+NOW_IN_JAKARTA = get_now_in_jakarta()
 
 warnings.filterwarnings("ignore")
 

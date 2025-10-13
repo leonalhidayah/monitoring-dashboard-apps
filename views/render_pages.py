@@ -1,4 +1,5 @@
-from datetime import date, datetime
+import time
+from datetime import date, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -6,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from data_preprocessor.utils import (
+    create_daily_template,
     create_visual_report,
     expand_sku,
     get_cpas_column_config,
@@ -13,13 +15,16 @@ from data_preprocessor.utils import (
     initialize_cpas_data_session,
     initialize_marketplace_data_session,
     parse_bundle_pcs,
+    process_changes,
 )
 from database.db_manager import (
+    fetch_all_flags_reg,
     get_advertiser_cpas_data,
     get_advertiser_marketplace_data,
+    get_budget_ads_summary_by_project,
+    get_budget_regular_summary_by_project,
     get_dim_projects,
     get_dim_stores,
-    get_financial_summary,
     get_map_project_stores,
     get_target_ads_ratio,
     get_total_sales_target,
@@ -27,8 +32,13 @@ from database.db_manager import (
     get_vw_ads_performance_summary,
     insert_advertiser_cpas_data,
     insert_advertiser_marketplace_data,
+    process_flag_changes_reg,
 )
+from views.config import REG_MAP_PROJECT, get_now_in_jakarta, get_yesterday_in_jakarta
 from views.style import load_css
+
+YESTERDAY_IN_JAKARTA = get_yesterday_in_jakarta()
+NOW_IN_JAKARTA = get_now_in_jakarta()
 
 
 def render_marketplace_page(project_name: str, project_config: dict):
@@ -251,13 +261,17 @@ def display_advertiser_dashboard(project_name: str):
     overall_cpa = total_spend / total_konversi if total_konversi > 0 else 0
 
     st.subheader("Ringkasan Performa Iklan")
-    kpi1, kpi2, kpi3, kpi4, kpi5, kpi6 = st.columns(6)
-    kpi1.metric("Total Spend", value=format_number(total_spend))
-    kpi2.metric("Total Gross Revenue", value=format_number(total_revenue))
-    kpi3.metric("Total Konversi", value=f"{total_konversi:,.0f}")
-    kpi4.metric("Total Produk Terjual", value=f"{int(total_produk_terjual):,.0f}")
-    kpi5.metric("ROAS", value=f"{overall_roas:.2f}")
-    kpi6.metric("CPA", value=format_number(overall_cpa))
+    kpi1, kpi2, kpi3 = st.columns(3)
+    kpi1.metric("Total Spend", value=format_number(total_spend), border=True)
+    kpi2.metric("Total Gross Revenue", value=format_number(total_revenue), border=True)
+    kpi3.metric("Total Konversi", value=f"{total_konversi:,.0f}", border=True)
+
+    kpi4, kpi5, kpi6 = st.columns(3)
+    kpi4.metric(
+        "Total Produk Terjual", value=f"{int(total_produk_terjual):,.0f}", border=True
+    )
+    kpi5.metric("ROAS", value=f"{overall_roas:.2f}", border=True)
+    kpi6.metric("CPA", value=format_number(overall_cpa), border=True)
 
     st.divider()
     st.subheader("Detail Performa per Toko")
@@ -330,27 +344,29 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
 
     # --- Bagian 1: Analisis Omset (Tidak Berubah) ---
     total_target_omset = get_total_sales_target(project_id, tgl_awal, tgl_akhir)
-    df_raw = get_financial_summary(project_id, tgl_awal, tgl_akhir)
+    df_raw = get_budget_ads_summary_by_project(
+        project_name=project_name,
+        start_date=tgl_awal,
+        end_date=tgl_akhir,
+    )
     total_omset_aktual = 0
     if not df_raw.empty:
-        df_omset_unik = df_raw[["tanggal", "omset_akrual"]].drop_duplicates()
-        total_omset_aktual = df_omset_unik["omset_akrual"].sum()
+        # total_omset_aktual = df_omset_unik["omset_akrual"].sum()
+        total_omset_aktual = df_raw["akrual_basis"].sum()
     pencapaian_persen = (
         (float(total_omset_aktual) / float(total_target_omset) * 100)
         if total_target_omset > 0
         else 0
     )
     col1, col2, col3 = st.columns(3)
-    col1.metric("💰 Omset Aktual (Akrual)", f"Rp {total_omset_aktual:,.0f}")
-    col2.metric("🎯 Target Omset", f"Rp {round(total_target_omset, -1):,.0f}")
-    col3.metric("🏆 Pencapaian Target", f"{pencapaian_persen:.2f} %")
+    col1.metric("Omset Aktual (Akrual)", f"Rp {total_omset_aktual:,.0f}", border=True)
+    col2.metric("Target Omset", f"Rp {round(total_target_omset, -1):,.0f}", border=True)
+    col3.metric("Pencapaian Target", f"{pencapaian_persen:.2f} %", border=True)
 
     st.divider()
 
-    # --- Bagian 2: Analisis Performa Iklan (DIMODIFIKASI TOTAL) ---
     st.header("Analisis Performa Iklan")
 
-    # Ambil data iklan sesuai filter tanggal
     df_ads = get_vw_ads_performance_summary(project_name, tgl_awal, tgl_akhir)
 
     if df_ads.empty:
@@ -429,18 +445,21 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             st.metric(
-                label="💸 Total Ad Spend (MP + CPAS)",
+                label="Total Ad Spend (MP + CPAS + FO)",
                 value=f"Rp {total_spending_ads:,.0f}",
+                border=True,
             )
         with col2:
             st.metric(
-                label="💰 Omset Berjalan (Total Pesanan)",
+                label="Omset Berjalan (Total Pesanan)",
                 value=f"Rp {total_omset_ads:,.0f}",
+                border=True,
             )
         with col3:
             st.metric(
-                label="📊 Rasio Ads/Omset",
+                label="Rasio Ads/Omset",
                 value=f"{rasio_ads_overall:.2f} %",
+                border=True,
             )
 
         st.divider()
@@ -557,10 +576,14 @@ def display_admin_dashboard(project_name: str):
     st.header("Ringkasan Data")
     m_col1, m_col2 = st.columns(2)
     m_col1.metric(
-        label="🚚 **Total Resi Unik**", value=f"{df_filtered['no_resi'].nunique():,.0f}"
+        label="🚚 **Total Resi Unik**",
+        value=f"{df_filtered['no_resi'].nunique():,.0f}",
+        border=True,
     )
     m_col2.metric(
-        label="🏢 **Brand Aktif**", value=f"{df_filtered['nama_brand'].nunique()}"
+        label="🏢 **Brand Aktif**",
+        value=f"{df_filtered['nama_brand'].nunique()}",
+        border=True,
     )
 
     st.divider()
@@ -717,11 +740,11 @@ def display_advertiser_cpas_dashboard(project_name: str):
     st.subheader("Ringkasan Performa Iklan")
     # 3. Tampilan KPI disesuaikan (kolom dikurangi menjadi 5)
     kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-    kpi1.metric("Total Spend", value=format_number(total_spend))
-    kpi2.metric("Total Gross Revenue", value=format_number(total_revenue))
-    kpi3.metric("Total Konversi", value=f"{total_konversi:,.0f}")
-    kpi4.metric("ROAS", value=f"{overall_roas:.2f}")
-    kpi5.metric("CPA", value=format_number(overall_cpa))
+    kpi1.metric("Total Spend", value=format_number(total_spend), border=True)
+    kpi2.metric("Total Gross Revenue", value=format_number(total_revenue), border=True)
+    kpi3.metric("Total Konversi", value=f"{total_konversi:,.0f}", border=True)
+    kpi4.metric("ROAS", value=f"{overall_roas:.2f}", border=True)
+    kpi5.metric("CPA", value=format_number(overall_cpa), border=True)
 
     st.divider()
     st.subheader("Detail Performa per Toko")
@@ -794,3 +817,424 @@ def display_advertiser_cpas_dashboard(project_name: str):
     st.subheader("Tren Harian: Gross Revenue vs Spend")
     time_series_data = df_filtered.groupby("tanggal")[["gross_revenue", "spend"]].sum()
     st.line_chart(time_series_data)
+
+
+def render_team_regular_tab(team_name, full_df, conn):
+    """Merender seluruh UI dan logika untuk satu tab tim."""
+    team_products_channels = REG_MAP_PROJECT[team_name]
+    team_products = sorted(list(set([p[0] for p in team_products_channels])))
+
+    # 1. Panel Aksi Cepat
+    with st.container(border=True):
+        st.markdown("#### Generate Template Harian")
+        template_date = st.date_input(
+            "Pilih Tanggal", value=YESTERDAY_IN_JAKARTA, key=f"date_{team_name}"
+        )
+        if st.button(
+            "Buat Template Harian",
+            type="primary",
+            width="stretch",
+            key=f"btn_{team_name}",
+        ):
+            with st.spinner(f"Membuat template untuk {team_name}..."):
+                create_daily_template(conn, template_date, team_products_channels)
+                st.toast(f"✅ Template untuk {team_name} siap!", icon="🎉")
+                st.session_state[f"auto_filter_date_{team_name}"] = template_date
+                st.cache_data.clear()
+                if "full_df" in st.session_state:
+                    del st.session_state.full_df
+                time.sleep(2)
+                st.rerun()
+    st.divider()
+
+    # 2. Filter & Tampilkan Data
+    team_df = full_df[full_df["product_name"].isin(team_products)]
+    default_start_date = st.session_state.get(
+        f"auto_filter_date_{team_name}",
+        team_df["performance_date"].min() if not team_df.empty else date.today(),
+    )
+    default_end_date = st.session_state.get(
+        f"auto_filter_date_{team_name}",
+        team_df["performance_date"].max() if not team_df.empty else date.today(),
+    )
+
+    st.markdown("### 🔎 Filter Data")
+    f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+    with f_col1:
+        start_date = st.date_input(
+            "Dari Tanggal", default_start_date, key=f"start_date_{team_name}"
+        )
+    with f_col2:
+        end_date = st.date_input(
+            "Sampai Tanggal", default_end_date, key=f"end_date_{team_name}"
+        )
+    with f_col3:
+        selected_product = st.selectbox(
+            "Pilih Produk",
+            options=["Semua Produk"] + team_products,
+            key=f"product_{team_name}",
+        )
+    with f_col4:
+        selected_channel = st.selectbox(
+            "Pilih Channel",
+            options=["Semua Channel", "CTWA", "Order Online"],
+            key=f"channel_{team_name}",
+        )
+
+    if f"auto_filter_date_{team_name}" in st.session_state:
+        del st.session_state[f"auto_filter_date_{team_name}"]
+
+    start_date_pd = pd.to_datetime(start_date).date()
+    end_date_pd = pd.to_datetime(end_date).date()
+    filtered_df = team_df[
+        (team_df["performance_date"] >= start_date_pd)
+        & (team_df["performance_date"] <= end_date_pd)
+    ]
+    if selected_product != "Semua Produk":
+        filtered_df = filtered_df[filtered_df["product_name"] == selected_product]
+    if selected_channel != "Semua Channel":
+        filtered_df = filtered_df[filtered_df["channel"] == selected_channel]
+
+    st.info(f"Menampilkan {len(filtered_df)} dari {len(team_df)} total data tim.")
+
+    # 3. Data Editor (dengan kolom Channel)
+    edited_df = st.data_editor(
+        filtered_df.reset_index(drop=True),
+        num_rows="dynamic",
+        key=f"editor_{team_name}",
+        hide_index=True,
+        column_order=(
+            "performance_date",
+            "product_name",
+            "channel",
+            "spend",
+            "reach",
+            "leads_generated",
+            "leads_received",
+            "deals_closed",
+            "gross_revenue",
+        ),
+        column_config={
+            "performance_date": st.column_config.DateColumn("Tanggal", required=True),
+            "product_name": st.column_config.TextColumn("Nama Produk", required=True),
+            "channel": st.column_config.SelectboxColumn(
+                "Channel", options=["CTWA", "Order Online"], required=True
+            ),
+            "spend": st.column_config.NumberColumn("Spend", format="accounting"),
+            "reach": st.column_config.NumberColumn("Reach"),
+            "leads_generated": st.column_config.NumberColumn("Leads (dari Iklan)"),
+            "leads_received": st.column_config.NumberColumn("Leads Diterima (CS)"),
+            "deals_closed": st.column_config.NumberColumn("Closing"),
+            "gross_revenue": st.column_config.NumberColumn(
+                "Gross Revenue", format="accounting"
+            ),
+        },
+    )
+
+    # 4. Tombol Simpan
+    if st.button("Simpan Perubahan", key=f"save_{team_name}", type="primary"):
+        with st.spinner("Menyimpan data..."):
+            try:
+                changes = st.session_state[f"editor_{team_name}"]
+                added = len(changes.get("added_rows", []))
+                edited = len(changes.get("edited_rows", {}))
+                deleted = len(changes.get("deleted_rows", []))
+                if added == 0 and edited == 0 and deleted == 0:
+                    st.toast("Tidak ada perubahan untuk disimpan.", icon="🤷")
+                else:
+                    process_changes(conn, filtered_df, changes)
+                    messages = []
+                    if added > 0:
+                        messages.append(f"{added} data ditambahkan")
+                    if edited > 0:
+                        messages.append(f"{edited} data diupdate")
+                    if deleted > 0:
+                        messages.append(f"{deleted} data dihapus")
+                    final_message = ", ".join(messages)
+                    st.toast(f"✅ Berhasil! {final_message}.", icon="🎉")
+                    time.sleep(5)
+                    st.cache_data.clear()
+                    if "full_df" in st.session_state:
+                        del st.session_state.full_df
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Terjadi kesalahan saat menyimpan: {e}")
+
+
+def render_order_flag_editor(conn):
+    """
+    Merender UI manajemen data penyesuaian menggunakan st.data_editor.
+    """
+    st.header("Manajemen Nominal Pesanan Dibatalkan")
+    st.caption(
+        "Gunakan editor di bawah untuk menambah, mengedit, atau menghapus data Return & Cancel."
+    )
+
+    if "flag_df" not in st.session_state:
+        st.session_state.flag_df = fetch_all_flags_reg(conn)
+
+    full_df = st.session_state.flag_df
+
+    # 2. Filter Data
+    st.markdown("### 🔎 Filter Data")
+    f_col1, f_col2, f_col3 = st.columns(3)
+
+    default_start = (
+        full_df["tanggal_input"].min()
+        if not full_df.empty
+        else date.today() - timedelta(days=30)
+    )
+    default_end = full_df["tanggal_input"].max() if not full_df.empty else date.today()
+
+    with f_col1:
+        start_date = st.date_input("Dari Tanggal", default_start, key="flag_start_date")
+    with f_col2:
+        end_date = st.date_input("Sampai Tanggal", default_end, key="flag_end_date")
+    with f_col3:
+        kategori_filter = st.selectbox(
+            "Kategori", ["Semua Kategori", "RETURN", "CANCEL"], key="flag_kategori"
+        )
+
+    filtered_df = full_df[
+        (full_df["tanggal_input"] >= start_date)
+        & (full_df["tanggal_input"] <= end_date)
+    ]
+    if kategori_filter != "Semua Kategori":
+        filtered_df = filtered_df[filtered_df["kategori"] == kategori_filter]
+
+    st.info(f"Menampilkan {len(filtered_df)} dari {len(full_df)} total data.")
+
+    # 3. Data Editor
+    edited_df = st.data_editor(
+        filtered_df,  # Tidak perlu reset_index() jika kita menyimpan index asli
+        num_rows="dynamic",
+        key="flag_editor",
+        hide_index=True,
+        # PERBAIKAN: Hapus kolom id dan timestamp dari tampilan utama
+        column_order=("tanggal_input", "kategori", "nominal_adjustment", "keterangan"),
+        column_config={
+            # PERBAIKAN: Sembunyikan kolom id dan timestamp dari editor
+            "id_flag": None,
+            "timestamp_created": None,
+            "tanggal_input": st.column_config.DateColumn(
+                "Tanggal", required=True, default=NOW_IN_JAKARTA
+            ),
+            "kategori": st.column_config.SelectboxColumn(
+                "Kategori",
+                options=["RETURN", "CANCEL"],
+                required=True,
+                default="RETURN",
+            ),
+            "nominal_adjustment": st.column_config.NumberColumn(
+                "Nominal", format="accounting", required=True, min_value=0
+            ),
+            "keterangan": st.column_config.TextColumn("Keterangan"),
+        },
+        width="stretch",
+    )
+
+    # 4. Tombol Simpan
+    if st.button(
+        "Simpan Perubahan",
+        key="flag_save_button",
+        type="primary",
+        width="stretch",
+    ):
+        with st.spinner("Menyimpan perubahan..."):
+            try:
+                changes = st.session_state["flag_editor"]
+
+                if not any(changes.values()):
+                    st.toast("Tidak ada perubahan untuk disimpan.", icon="🤷")
+                else:
+                    process_flag_changes_reg(conn, filtered_df, changes)
+
+                    st.toast("✅ Perubahan berhasil disimpan!", icon="🎉")
+                    time.sleep(2)
+                    del st.session_state.flag_df
+                    st.rerun()
+
+            except Exception as e:
+                st.error(f"Terjadi kesalahan saat menyimpan: {e}")
+
+
+def display_budgeting_regular_dashboard(project_id: int, project_name: str):
+    """
+    Menampilkan dashboard finansial lengkap dengan gauge chart dinamis.
+    """
+    st.title(f"📊 Dashboard Finansial: {project_name}")
+
+    # --- Filter Periode di ATAS HALAMAN ---
+    st.divider()
+    col_header, col_filter = st.columns([2, 1])
+    with col_header:
+        st.header("Ringkasan Performa Omset")
+    with col_filter:
+        today = date.today()
+        start_default = today.replace(day=1)
+        date_range = st.date_input(
+            "Pilih Periode Analisis:",
+            value=(start_default, today),
+            key=f"date_filter_{project_name}",
+        )
+
+    if not (isinstance(date_range, tuple) and len(date_range) == 2):
+        st.warning("Harap pilih rentang tanggal yang valid (mulai dan akhir).")
+        st.stop()
+
+    tgl_awal, tgl_akhir = date_range
+    st.caption(
+        f"Periode: {tgl_awal.strftime('%d %B %Y')} s/d {tgl_akhir.strftime('%d %B %Y')}"
+    )
+
+    # --- Bagian 1: Analisis Omset (Tidak Berubah) ---
+    total_target_omset = get_total_sales_target(project_id, tgl_awal, tgl_akhir)
+    df_raw = get_budget_regular_summary_by_project(
+        start_date=tgl_awal,
+        end_date=tgl_akhir,
+    )
+    total_omset_aktual = 0
+    if not df_raw.empty:
+        # total_omset_aktual = df_omset_unik["omset_akrual"].sum()
+        total_omset_aktual = df_raw["akrual_basis"].sum()
+    pencapaian_persen = (
+        (float(total_omset_aktual) / float(total_target_omset) * 100)
+        if total_target_omset > 0
+        else 0
+    )
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Omset Aktual (Akrual)", f"Rp {total_omset_aktual:,.0f}", border=True)
+    col2.metric("Target Omset", f"Rp {round(total_target_omset, -1):,.0f}", border=True)
+    col3.metric("Pencapaian Target", f"{pencapaian_persen:.2f} %", border=True)
+
+    st.divider()
+
+    st.header("Analisis Performa Iklan")
+
+    df_ads = get_vw_ads_performance_summary(tgl_awal, tgl_akhir)
+
+    if df_ads.empty:
+        st.info("Tidak ada data performa iklan yang ditemukan untuk periode ini.")
+    else:
+        # Kalkulasi metrik keseluruhan untuk periode yang dipilih
+        total_spending_ads = df_ads["total_spending"].sum()
+        total_omset_ads = df_ads["total_omset"].sum()
+        rasio_ads_overall = (
+            (total_spending_ads / total_omset_ads * 100) if total_omset_ads > 0 else 0
+        )
+
+        year = tgl_akhir.year
+        quarter = (tgl_akhir.month - 1) // 3 + 1
+        target_rasio = get_target_ads_ratio(project_id, year, quarter)
+
+        if target_rasio is None:
+            st.warning(f"Target rasio untuk Q{quarter} {year} belum diatur.")
+        else:
+            safe_zone_start = target_rasio - 5
+
+            if rasio_ads_overall < safe_zone_start:
+                status_text = "Under"
+                bar_color = "tomato"
+            elif safe_zone_start <= rasio_ads_overall <= target_rasio:
+                status_text = "Normal"
+                bar_color = "green"
+            else:
+                status_text = "Over"
+                bar_color = "tomato"
+
+            df_ads["target_rasio"] = target_rasio
+            conditions = [
+                df_ads["ads_spend_percentage"] < safe_zone_start,
+                (df_ads["ads_spend_percentage"] >= safe_zone_start)
+                & (df_ads["ads_spend_percentage"] <= target_rasio),
+            ]
+
+            # Definisikan pilihan status sesuai kondisi
+            choices = ["Under", "Normal"]
+
+            # Tambahkan kolom 'target_rasio' dan 'status'
+            df_ads["target_rasio"] = target_rasio
+            df_ads["status"] = np.select(conditions, choices, default="Over")
+
+            fig = go.Figure(
+                go.Indicator(
+                    mode="gauge+number",
+                    value=rasio_ads_overall,
+                    number={"suffix": "%", "font": {"size": 40}},
+                    title={
+                        "text": f"Target: {target_rasio:.2f}%, Status: {status_text}",
+                        "font": {"size": 20},
+                    },
+                    gauge={
+                        "axis": {"range": [0, target_rasio * 2]},
+                        "bar": {"color": bar_color},
+                        "steps": [
+                            {
+                                "range": [safe_zone_start, target_rasio],
+                                "color": "lightgreen",
+                            },
+                        ],
+                        "threshold": {
+                            "line": {"color": "black", "width": 4},
+                            "value": target_rasio,
+                        },
+                    },
+                )
+            )
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=60, b=20))
+            st.plotly_chart(fig, width="stretch")
+
+        st.divider()
+        # --- Sub-Bagian Metrik Ringkasan ---
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
+            st.metric(
+                label="Total Ad Spend (MP + CPAS + FO)",
+                value=f"Rp {total_spending_ads:,.0f}",
+                border=True,
+            )
+        with col2:
+            st.metric(
+                label="Omset Berjalan (Total Pesanan)",
+                value=f"Rp {total_omset_ads:,.0f}",
+                border=True,
+            )
+        with col3:
+            st.metric(
+                label="Rasio Ads/Omset",
+                value=f"{rasio_ads_overall:.2f} %",
+                border=True,
+            )
+
+        st.divider()
+
+        st.subheader("Total Omset Berjalan vs Ads Spend")
+
+        df_omset_daily = (
+            df_ads.groupby(["tanggal"])[["total_omset", "total_spending"]]
+            .sum()
+            .rename(
+                columns={
+                    "total_omset": "Total Omset Berjalan",
+                    "total_spending": "Total Ads Spending",
+                }
+            )
+        )
+
+        st.line_chart(df_omset_daily)
+
+        st.divider()
+
+        # Tampilkan tabel detail performa iklan
+        st.subheader("Detail Performa Iklan per Toko")
+        st.dataframe(
+            df_ads.style.format(
+                {
+                    "total_omset": "Rp {:,.0f}",
+                    "total_spending": "Rp {:,.0f}",
+                    "ads_spend_percentage": "{:.2f}%",
+                    "target_rasio": "{:.2f}%",
+                }
+            ),
+            width="stretch",
+        )

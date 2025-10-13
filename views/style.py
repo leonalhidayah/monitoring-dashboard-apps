@@ -19,3 +19,7 @@ def load_css():
 
 def format_rupiah(x):
     return f"Rp {x:,.0f}"
+
+
+def format_percent(x):
+    return f"{x * 100:.2f}%"

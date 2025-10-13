@@ -8,15 +8,18 @@ import streamlit as st
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from psycopg2 import sql
 
 from views.config import (
-    ADV_MP_MAP_PROJECT,
     AKUN_REGULAR,
     MARKETPLACE_LIST,
     PLATFORM_REGULAR,
+    PROJECT_NAME_LIST,
     TOKO_BANDUNG,
-    YESTERDAY_IN_JAKARTA,
+    get_yesterday_in_jakarta,
 )
+
+YESTERDAY_IN_JAKARTA = get_yesterday_in_jakarta()
 
 
 # -- ORDERS DATA
@@ -517,7 +520,7 @@ def get_non_ads_lainnya_column_config():
             required=True,
         ),
         "Nama Project": st.column_config.SelectboxColumn(
-            "Nama Project", options=list(ADV_MP_MAP_PROJECT.keys()), required=True
+            "Nama Project", options=PROJECT_NAME_LIST, required=True
         ),
         "Keterangan": st.column_config.TextColumn("Keterangan", required=True),
         "Nominal Aktual Non Ads": st.column_config.NumberColumn(
@@ -1214,3 +1217,220 @@ def get_quarter_months(month: int):
         return ["July", "August", "September"], 3
     else:
         return ["October", "November", "December"], 4
+
+
+def transform_budget_to_report(df_raw_budget: pd.DataFrame) -> pd.DataFrame:
+    """
+    Mengubah DataFrame budget mentah (format panjang) menjadi format laporan (format lebar)
+    menggunakan pivot.
+    """
+    if df_raw_budget.empty:
+        return pd.DataFrame()
+
+    df = df_raw_budget.drop(columns=["id", "created_at", "project_id"], errors="ignore")
+
+    pivot_df = df.pivot_table(
+        index=[
+            "project_name",
+            "parameter_name",
+            "target_rasio_persen",
+            "tahun",
+            "kuartal",
+        ],
+        columns="bulan",
+        values="target_bulanan_rp",
+        aggfunc="sum",
+    ).reset_index()
+
+    pivot_df.columns.name = None
+
+    bulan_order = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+    existing_months = [month for month in bulan_order if month in pivot_df.columns]
+
+    if existing_months:
+        pivot_df["Target Kuartal"] = (pivot_df[existing_months[0]] * 3).round(-1)
+    else:
+        pivot_df["Target Kuartal"] = 0
+
+    final_columns_order = (
+        ["project_name", "parameter_name", "target_rasio_persen", "Target Kuartal"]
+        + existing_months
+        + ["tahun", "kuartal"]
+    )
+
+    report_df = pivot_df[final_columns_order]
+
+    report_df = report_df.rename(
+        columns={
+            "project_name": "Project",
+            "parameter_name": "Parameter",
+            "target_rasio_persen": "Target Rasio",
+            "tahun": "Tahun",
+            "kuartal": "Kuartal",
+        }
+    )
+
+    return report_df
+
+
+# ADV REGULAR
+def initialize_adv_reg_data_session(platform, project_list, produk_list):
+    """
+    Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
+    """
+    session_key = f"df_{platform}_adv_reg"
+
+    if session_key not in st.session_state:
+        # Buat DataFrame default dengan kolom yang dibutuhkan
+        data = {
+            "Tanggal": pd.Series(
+                YESTERDAY_IN_JAKARTA,
+                index=range(len(produk_list)),
+            ),
+            "Produk": project_list,
+            "Spend": [0.0] * len(produk_list),
+            "Reach": [0.0] * len(produk_list),
+            "CTR": [0.0] * len(produk_list),
+            "Thruplays": [0.0] * len(produk_list),
+            "Lead": [0] * len(produk_list),
+        }
+        st.session_state[session_key] = pd.DataFrame(data)
+
+
+def get_adv_reg_column_config(store_list):
+    """
+    Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
+    """
+
+    return {
+        "Tanggal": st.column_config.DateColumn(
+            "Tanggal",
+            min_value=pd.Timestamp(2023, 1, 1),
+            format="YYYY-MM-DD",
+            required=True,
+        ),
+        "Produk": st.column_config.SelectboxColumn(
+            "Produk",
+            options=MARKETPLACE_LIST,
+            required=True,
+        ),
+        "Nama Toko": st.column_config.SelectboxColumn(
+            "Nama Toko",
+            options=store_list,
+            required=True,
+        ),
+        "Akrual Basis": st.column_config.NumberColumn(
+            "Akrual Basis (Rp)",
+            min_value=0.0,
+            format="accounting",
+            required=True,
+        ),
+        "Cash Basis": st.column_config.NumberColumn(
+            "Cash Basis (Rp)",
+            min_value=0.0,
+            format="accounting",
+        ),
+        "Bukti": st.column_config.TextColumn("Bukti"),
+        "Akun Bank": st.column_config.TextColumn("Akun Bank"),
+    }
+
+
+@st.cache_data(ttl=30)
+def fetch_data(_conn):
+    """Mengambil semua data, diurutkan dengan channel."""
+    query = "SELECT * FROM advertiser_cs_regular ORDER BY performance_date DESC, product_name, channel;"
+    try:
+        df = pd.read_sql(query, _conn)
+        df["performance_date"] = pd.to_datetime(df["performance_date"]).dt.date
+        return df
+    except Exception as e:
+        st.error(f"Gagal mengambil data: {e}")
+        return pd.DataFrame()
+
+
+def create_daily_template(conn, template_date, product_channel_list):
+    """Memasukkan baris template dengan menyertakan channel."""
+    with conn.cursor() as cur:
+        for product, channel in product_channel_list:
+            query = """
+                INSERT INTO advertiser_cs_regular (performance_date, product_name, channel)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (performance_date, product_name, channel) DO NOTHING;
+            """
+            cur.execute(query, (template_date, product, channel))
+    conn.commit()
+
+
+def process_changes(conn, original_df, changes):
+    """Memproses perubahan dengan primary key tiga bagian."""
+    with conn.cursor() as cur:
+        # Proses Hapus
+        for index in changes["deleted_rows"]:
+            row = original_df.iloc[index]
+            cur.execute(
+                "DELETE FROM advertiser_cs_regular WHERE performance_date = %s AND product_name = %s AND channel = %s;",
+                (row["performance_date"], row["product_name"], row["channel"]),
+            )
+
+        # Proses Tambah (UPSERT)
+        for new_row in changes["added_rows"]:
+            new_row.pop("_index", None)
+            if not all(
+                new_row.get(k) for k in ["performance_date", "product_name", "channel"]
+            ):
+                continue
+
+            cols = [sql.Identifier(k) for k, v in new_row.items() if v is not None]
+            if not cols:
+                continue
+            vals = [v for v in new_row.values() if v is not None]
+            update_assignments = sql.SQL(", ").join(
+                sql.SQL("{col} = EXCLUDED.{col}").format(col=col)
+                for col in cols
+                if col.string not in ["performance_date", "product_name", "channel"]
+            )
+
+            query = sql.SQL("""
+                INSERT INTO advertiser_cs_regular ({cols}) VALUES ({vals})
+                ON CONFLICT (performance_date, product_name, channel) DO UPDATE SET {updates};
+            """).format(
+                cols=sql.SQL(", ").join(cols),
+                vals=sql.SQL(", ").join(sql.Placeholder() * len(vals)),
+                updates=update_assignments,
+            )
+            cur.execute(query, vals)
+
+        # Proses Edit
+        for index, updates in changes["edited_rows"].items():
+            updates.pop("_index", None)
+            if not updates:
+                continue
+
+            original_row = original_df.iloc[index]
+            set_clauses = [
+                sql.SQL("{} = %s").format(sql.Identifier(col)) for col in updates.keys()
+            ]
+            query = sql.SQL(
+                "UPDATE advertiser_cs_regular SET {} WHERE performance_date = %s AND product_name = %s AND channel = %s;"
+            ).format(sql.SQL(", ").join(set_clauses))
+
+            params = list(updates.values()) + [
+                original_row["performance_date"],
+                original_row["product_name"],
+                original_row["channel"],
+            ]
+            cur.execute(query, params)
+    conn.commit()

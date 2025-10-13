@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytz
 
+from database.db_manager import get_dim_projects
+
 DATA_MAP_FINANCE = {
     "Zhi Yang Yao": {
         "Marketplace": [
@@ -282,6 +284,31 @@ ADV_CPAS_MAP_PROJECT = {
 }
 
 
+REG_MAP_PROJECT = {
+    "ZYY x JUW": [
+        ("Zhi Yang Yao Inhaler @ 2 ml", "CTWA"),
+        ("Bio Antanam @10 Kapsul 500 Mg", "CTWA"),
+        ("Bycetin 20 Gr", "CTWA"),
+        ("Zhi Yang Yao Inhaler @ 2 ml", "Order Online"),
+        ("Bio Antanam @10 Kapsul 500 Mg", "Order Online"),
+        ("Bycetin 20 Gr", "Order Online"),
+    ],
+    "ENZ x KDK": [
+        ("Enzhico (Roll On) Zhicology", "CTWA"),
+        ("Enzhico (Roll On) Zhimotion", "CTWA"),
+        ("Enzhico (Roll On) Zhiporia", "CTWA"),
+        ("Enzhico (Roll On) Zhitera", "CTWA"),
+        ("Kudaku", "CTWA"),
+        ("Erassgo Roll On", "CTWA"),
+        ("Enzhico (Roll On) Zhicology", "Order Online"),
+        ("Enzhico (Roll On) Zhimotion", "Order Online"),
+        ("Enzhico (Roll On) Zhiporia", "Order Online"),
+        ("Enzhico (Roll On) Zhitera", "Order Online"),
+        ("Kudaku", "Order Online"),
+        ("Erassgo Roll On", "Order Online"),
+    ],
+}
+
 TOKO_BANDUNG = [
     "SP zhi yang yao official",
     "SP erassgo bandung",
@@ -294,9 +321,20 @@ MARKETPLACE_LIST = ["Lazada", "Shopee", "TikTok", "Tokopedia"]
 
 PROJECT_ROOT = Path().cwd().parent
 
-jakarta_tz = pytz.timezone("Asia/Jakarta")
-NOW_IN_JAKARTA = datetime.now(jakarta_tz)
-YESTERDAY_IN_JAKARTA = NOW_IN_JAKARTA - timedelta(days=1)
+# jakarta_tz = pytz.timezone("Asia/Jakarta")
+# NOW_IN_JAKARTA = datetime.now(jakarta_tz)
+# YESTERDAY_IN_JAKARTA = NOW_IN_JAKARTA - timedelta(days=1)
+
+
+def get_yesterday_in_jakarta():
+    tz = pytz.timezone("Asia/Jakarta")
+    return (datetime.now(tz) - timedelta(days=1)).date()
+
+
+def get_now_in_jakarta():
+    tz = pytz.timezone("Asia/Jakarta")
+    return datetime.now(tz)
+
 
 AKUN_REGULAR = [
     "Akun Om Diki",
@@ -309,3 +347,5 @@ PLATFORM_REGULAR = [
     "J&T",
     "Sadewa Citra Mandiri",
 ]
+
+PROJECT_NAME_LIST = get_dim_projects()["project_name"].tolist()

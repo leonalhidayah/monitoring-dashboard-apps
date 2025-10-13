@@ -91,6 +91,47 @@ def get_dim_shipping_services():
     )
 
 
+def get_finance_budget_plan_by_project(
+    project_name: str, start_date: date, end_date: date
+) -> pd.DataFrame:
+    """
+    Mengambil data mentah finance_budget_plan dari database berdasarkan
+    project_name dan rentang tanggal.
+    """
+    conn = None
+    # Query ini mengambil semua kolom yang dibutuhkan untuk transformasi
+    query = """
+        SELECT fbp.*, dp.project_name 
+        FROM finance_budget_plan fbp
+        INNER JOIN dim_projects dp ON dp.project_id = fbp.project_id
+        WHERE
+            dp.project_name = %(project_name)s
+            AND TO_DATE(fbp.bulan || ' ' || fbp.tahun, 'FMMonth YYYY') 
+                BETWEEN %(start_date)s AND %(end_date)s
+        ORDER BY
+            fbp.tahun, 
+            TO_DATE(fbp.bulan, 'FMMonth');
+    """
+    try:
+        conn = get_connection()
+        if not conn:
+            return pd.DataFrame()
+
+        params = {
+            "project_name": project_name,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+        df = pd.read_sql_query(query, conn, params=params)
+        return df
+    except (Exception, psycopg2.Error) as e:
+        logging.error(f"Gagal mengambil data budget plan: {e}")
+        return pd.DataFrame()
+    finally:
+        if conn:
+            conn.close()
+
+
 def get_dim_payment_methods():
     """Mengambil semua data dari tabel dim_payment_methods."""
     return get_table_data(table_name="dim_payment_methods")
@@ -266,7 +307,7 @@ def get_total_sales_target(project_id: int, start_date: str, end_date: str):
             finance_budget_plan
         WHERE
             project_id = %(project_id)s
-            AND parameter_name = 'Target Omset' -- Kunci: Hanya mengambil parameter Target Omset
+            AND parameter_name = 'Target Omset'
             AND to_date(tahun || '-' || bulan, 'YYYY-Month') BETWEEN %(start_date)s AND %(end_date)s;
     """
     try:
@@ -281,6 +322,61 @@ def get_total_sales_target(project_id: int, start_date: str, end_date: str):
     except psycopg2.Error as e:
         logging.error(f"Gagal mengambil total target omset: {e}")
         return 0
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_vw_monitoring_cashflow(
+    project_name: str, start_date: date, end_date: date
+) -> pd.DataFrame:
+    """
+    Mengambil detail laporan monitoring dari view dan mengembalikannya sebagai Pandas DataFrame.
+    Fungsi ini ideal untuk digunakan langsung di UI seperti Streamlit.
+    """
+    conn = None
+    query = """
+        SELECT 
+            project_name AS "Project",
+            report_year AS "Tahun",
+            report_month_name AS "Bulan",
+            parameter_name AS "Parameter Budget",
+            maksimal_budget AS "Maksimal Budget (Plan)",
+            total_realisasi AS "Total Realisasi (Actual)",
+            sisa_budget AS "Sisa Budget",
+            persentase_terpakai AS "Persentase Terpakai",
+            status AS "Status"
+        FROM 
+            vw_monitoring_cashflow
+        WHERE
+            project_name = %(project_name)s
+            AND TO_DATE(report_month_name || ' ' || report_year, 'FMMonth YYYY') 
+                BETWEEN %(start_date)s AND %(end_date)s
+        ORDER BY
+            report_year, 
+            TO_DATE(report_month_name, 'FMMonth');
+    """
+    try:
+        conn = get_connection()
+        # Jika koneksi gagal, kembalikan DataFrame kosong
+        if not conn:
+            return pd.DataFrame()
+
+        params = {
+            "project_name": project_name,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+
+        # pd.read_sql_query adalah cara paling efisien untuk mendapatkan DataFrame
+        df = pd.read_sql_query(query, conn, params=params)
+        return df
+
+    except (Exception, psycopg2.Error) as e:
+        logging.error(f"Gagal mengambil data monitoring report: {e}")
+        # Kembalikan DataFrame kosong jika terjadi error saat query
+        return pd.DataFrame()
+
     finally:
         if conn:
             conn.close()
@@ -427,7 +523,6 @@ def get_financial_summary(project_id: int, start_date: str, end_date: str):
     date_series AS (
         SELECT generate_series(%(start_date)s::date, %(end_date)s::date, '1 day'::interval) AS tanggal
     ),
-    -- 1. Mengambil budget plan dan digabungkan dengan kategori untuk mendapatkan SEMUA category_id yang relevan
     budget_with_categories AS (
         SELECT 
             fbp.parameter_name,
@@ -1689,3 +1784,170 @@ def get_budget_ads_summary_by_project(project_name, start_date=None, end_date=No
         if conn is not None:
             conn.close()
             print("Database connection closed.")
+
+
+def fetch_all_flags_reg(conn):
+    """Mengambil semua data dari order_flag_reg dan mengonversi tipe data."""
+    query = "SELECT * FROM order_flag_reg ORDER BY tanggal_input DESC, id_flag DESC;"
+    df = pd.read_sql(query, conn)
+    # Konversi tipe data yang penting untuk data editor
+    df["tanggal_input"] = pd.to_datetime(df["tanggal_input"]).dt.date
+    df["nominal_adjustment"] = df["nominal_adjustment"].astype(float)
+    return df
+
+
+def process_flag_changes_reg(conn, original_df, changes):
+    """
+    Memproses semua perubahan (tambah, edit, hapus) dari data editor
+    dan menerapkannya ke database.
+    """
+    cursor = conn.cursor()
+
+    # 1. Proses Penghapusan Data
+    if "deleted_rows" in changes and changes["deleted_rows"]:
+        indices_to_delete = changes["deleted_rows"]
+        ids_to_delete = original_df.iloc[indices_to_delete]["id_flag"].tolist()
+        for flag_id in ids_to_delete:
+            # PERBAIKAN: Ubah numpy.int64 menjadi int standar Python
+            cursor.execute(
+                "DELETE FROM order_flag_reg WHERE id_flag = %s", (int(flag_id),)
+            )
+
+    # 2. Proses Penambahan Data
+    if "added_rows" in changes and changes["added_rows"]:
+        for new_row in changes["added_rows"]:
+            cursor.execute(
+                """
+                INSERT INTO order_flag_reg (tanggal_input, nominal_adjustment, kategori, keterangan)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (
+                    new_row.get("tanggal_input", date.today()),
+                    new_row.get("nominal_adjustment", 0.0),
+                    new_row.get("kategori", "RETURN"),
+                    new_row.get("keterangan", None),
+                ),
+            )
+
+    # 3. Proses Pengeditan Data
+    if "edited_rows" in changes and changes["edited_rows"]:
+        for index, updates in changes["edited_rows"].items():
+            flag_id = original_df.iloc[int(index)]["id_flag"]
+
+            set_clauses = [f"{key} = %s" for key in updates.keys()]
+            query = (
+                f"UPDATE order_flag_reg SET {', '.join(set_clauses)} WHERE id_flag = %s"
+            )
+
+            # PERBAIKAN: Ubah numpy.int64 menjadi int standar Python untuk ID
+            values = list(updates.values()) + [int(flag_id)]
+            cursor.execute(query, tuple(values))
+
+    conn.commit()
+    cursor.close()
+
+
+def get_budget_regular_summary_by_project(
+    start_date=None, end_date=None
+) -> pd.DataFrame:
+    """
+    Mengambil data summary budget dari view vw_budget_regular_summary.
+    Data hanya difilter berdasarkan rentang tanggal.
+
+    Args:
+        start_date (Optional[date]): Tanggal mulai untuk filter (inklusif).
+        end_date (Optional[date]): Tanggal akhir untuk filter (inklusif).
+
+    Returns:
+        Optional[pd.DataFrame]: DataFrame berisi hasil query, atau None jika error.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+
+        # Memulai dengan parameter dan klausa WHERE yang kosong
+        params = {}
+        where_clauses = []
+
+        # Menambahkan filter tanggal secara dinamis jika disediakan
+        if start_date:
+            where_clauses.append("tanggal >= %(s_date)s")
+            params["s_date"] = start_date
+
+        if end_date:
+            where_clauses.append("tanggal <= %(e_date)s")
+            params["e_date"] = end_date
+
+        # Membangun klausa WHERE hanya jika ada filter yang diterapkan
+        where_sql = ""
+        if where_clauses:
+            where_sql = "WHERE " + " AND ".join(where_clauses)
+
+        sql_query = f"""
+            SELECT *
+            FROM vw_budget_regular_summary
+            {where_sql}
+            ORDER BY tanggal;
+        """
+
+        print("Executing query for regular budget summary...")
+        df = pd.read_sql(sql_query, conn, params=params)
+
+        return df
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error: {error}")
+        return None
+
+    finally:
+        if conn is not None:
+            conn.close()
+            print("Database connection closed.")
+
+
+def get_vw_ads_performance_summary(start_date: date, end_date: date) -> pd.DataFrame:
+    """
+    Mengambil data dari view vw_regular_performance_net berdasarkan filter tanggal.
+
+    Args:
+        start_date (date): Tanggal mulai periode.
+        end_date (date): Tanggal akhir periode.
+
+    Returns:
+        pd.DataFrame: DataFrame berisi detail performa.
+                      Mengembalikan DataFrame kosong jika tidak ada data atau terjadi error.
+    """
+    # Query disederhanakan: Hapus filter project_name dan ORDER BY nama_toko
+    query = """
+        SELECT
+            *
+        FROM
+            vw_regular_performance_net
+        WHERE
+            tanggal BETWEEN %(start_date)s AND %(end_date)s
+        ORDER BY
+            tanggal DESC;
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        df = pd.read_sql(
+            query,
+            conn,
+            # Params disederhanakan: Hapus project_name
+            params={
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
+        logging.info(
+            f"Successfully fetched {len(df)} rows from vw_regular_performance_net."
+        )
+        return df
+    except (Exception, psycopg2.DatabaseError) as e:
+        # Log error yang lebih spesifik
+        logging.error(f"Failed to fetch data from vw_regular_performance_net: {e}")
+        return pd.DataFrame()  # Kembalikan dataframe kosong jika error
+    finally:
+        if conn:
+            conn.close()

@@ -5,16 +5,19 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
+from data_preprocessor.utils import transform_budget_to_report
 from database.db_manager import (
     get_budget_ads_summary_by_project,
     get_dim_projects,
+    get_finance_budget_plan_by_project,
     get_marketing_ads_ratio,
+    get_vw_monitoring_cashflow,
 )
-from views.style import format_rupiah, load_css
+from views.style import format_percent, format_rupiah, load_css
 
 project_root = Path.cwd()
 
-st.title("📊 Budget Ads Summary Dashboard")
+st.title("Dashboard Finance")
 
 try:
     project_df = get_dim_projects()
@@ -61,24 +64,104 @@ st.markdown("---")
 
 # --- Memuat dan Menampilkan Data ---
 if selected_project:
+    # st.header("Monitoring Plan, Aktualisasi, Realisasi")
+    df_plan = get_finance_budget_plan_by_project(
+        project_name=selected_project, start_date=start_date, end_date=end_date
+    )
+    df_plan_transform = transform_budget_to_report(df_plan)
+    formatter_dict = {"Target Kuartal": format_rupiah, "Target Rasio": "{:.2f}%"}
+
+    all_months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+
+    existing_month_columns = [
+        month for month in all_months if month in df_plan_transform.columns
+    ]
+
+    for month in existing_month_columns:
+        formatter_dict[month] = format_rupiah
+
+    styled_df_plan = df_plan_transform.style.format(formatter_dict)
+
+    df_cashflow_monitoring = get_vw_monitoring_cashflow(
+        project_name=selected_project, start_date=start_date, end_date=end_date
+    )
+    df_cashflow_monitoring = df_cashflow_monitoring.query(
+        "`Parameter Budget` != 'Target Omset'"
+    )
+
+    def highlight_status_cashflow(val):
+        color = "tomato" if val == "Over Budget" else "lightgreen"
+        return f"background-color: {color}; color: black; font-weight: bold; text-align: center;"
+
+    # Terapkan styling ke DataFrame
+    styled_df_cashflow = (
+        df_cashflow_monitoring.style.format(
+            {
+                "Maksimal Budget (Plan)": format_rupiah,
+                "Total Realisasi (Actual)": format_rupiah,
+                "Sisa Budget": format_rupiah,
+                "Persentase Terpakai": format_percent,
+            }
+        )
+        .applymap(highlight_status_cashflow, subset=["Status"])
+        .set_properties(
+            **{
+                "text-align": "center",
+                "border": "1px solid #ccc",
+                "border-radius": "4px",
+                "padding": "6px",
+            }
+        )
+    )
+
+    # st.header("Budget Ads Summary Dashboard")
+
     df = get_budget_ads_summary_by_project(
         project_name=selected_project,
         start_date=start_date,
         end_date=end_date,
     )
 
-    st.header(f"Menampilkan Data untuk: {selected_project}")
+    st.header(f"Ringkasan Data: {selected_project}")
     st.markdown("  ")
 
     if df is not None and not df.empty:
         total_akrual = df["akrual_basis"].sum()
         total_cash = df["cash_basis"].sum()
         total_topup = df["aktual_topup"].sum()
+        total_cashout = df_cashflow_monitoring["Total Realisasi (Actual)"].sum()
+        estimasi_profit = total_akrual - total_cashout
 
-        kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-        kpi_col1.metric("Total Akrual Basis", f"Rp {total_akrual:,.0f}")
-        kpi_col2.metric("Total Cash Basis", f"Rp {total_cash:,.0f}")
-        kpi_col3.metric("Total Aktual Topup", f"Rp {total_topup:,.0f}")
+        kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
+        kpi_col1.metric("Total Akrual Basis", f"Rp {total_akrual:,.0f}", border=True)
+        kpi_col2.metric("Total Cash Basis", f"Rp {total_cash:,.0f}", border=True)
+        kpi_col3.metric("Total Cashout", f"Rp {total_cashout:,.0f}", border=True)
+        kpi_col4.metric("Total Aktual Topup", f"Rp {total_topup:,.0f}", border=True)
+
+        st.metric("Estimasi Profit", f"Rp {estimasi_profit:,.0f}", border=True)
+
+        st.divider()
+
+        st.subheader("Budget Plan")
+        st.dataframe(styled_df_plan)
+
+        st.divider()
+
+        st.subheader("Aktualisasi vs Realisasi")
+        st.dataframe(styled_df_cashflow)
 
         st.divider()
 
