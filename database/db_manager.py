@@ -1905,7 +1905,9 @@ def get_budget_regular_summary_by_project(
             print("Database connection closed.")
 
 
-def get_vw_ads_performance_summary(start_date: date, end_date: date) -> pd.DataFrame:
+def get_vw_ragular_performance_summary(
+    start_date: date, end_date: date
+) -> pd.DataFrame:
     """
     Mengambil data dari view vw_regular_performance_net berdasarkan filter tanggal.
 

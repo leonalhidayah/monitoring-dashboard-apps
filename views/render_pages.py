@@ -30,6 +30,7 @@ from database.db_manager import (
     get_total_sales_target,
     get_vw_admin_shipments_delivery,
     get_vw_ads_performance_summary,
+    get_vw_ragular_performance_summary,
     insert_advertiser_cpas_data,
     insert_advertiser_marketplace_data,
     process_flag_changes_reg,
@@ -1114,7 +1115,7 @@ def display_budgeting_regular_dashboard(project_id: int, project_name: str):
 
     st.header("Analisis Performa Iklan")
 
-    df_ads = get_vw_ads_performance_summary(tgl_awal, tgl_akhir)
+    df_ads = get_vw_ragular_performance_summary(tgl_awal, tgl_akhir)
 
     if df_ads.empty:
         st.info("Tidak ada data performa iklan yang ditemukan untuk periode ini.")
