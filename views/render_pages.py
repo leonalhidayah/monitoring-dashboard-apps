@@ -824,7 +824,6 @@ def render_team_regular_tab(team_name, full_df, conn):
     team_products_channels = REG_MAP_PROJECT[team_name]
     team_products = sorted(list(set([p[0] for p in team_products_channels])))
 
-    # 1. Panel Aksi Cepat
     with st.container(border=True):
         st.markdown("#### Generate Template Harian")
         template_date = st.date_input(
@@ -915,8 +914,12 @@ def render_team_regular_tab(team_name, full_df, conn):
             "gross_revenue",
         ),
         column_config={
-            "performance_date": st.column_config.DateColumn("Tanggal", required=True),
-            "product_name": st.column_config.TextColumn("Nama Produk", required=True),
+            "performance_date": st.column_config.DateColumn(
+                "Tanggal", required=True, default=YESTERDAY_IN_JAKARTA
+            ),
+            "product_name": st.column_config.SelectboxColumn(
+                "Nama Produk", required=True, options=team_products
+            ),
             "channel": st.column_config.SelectboxColumn(
                 "Channel", options=["CTWA", "Order Online"], required=True
             ),
