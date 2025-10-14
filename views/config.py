@@ -287,9 +287,15 @@ ADV_CPAS_MAP_PROJECT = {
 REG_MAP_PROJECT = {
     "ZYY x JUW": [
         ("Zhi Yang Yao Inhaler @ 2 ml", "CTWA"),
+        ("Zhi Yang Yao Spray @ 60 ml", "CTWA"),
+        ("Zhi Yang Yao Spray @ 30 ml", "CTWA"),
+        ("Zhi Yang Yao Roll On @ 4 ml", "CTWA"),
         ("Bio Antanam @10 Kapsul 500 Mg", "CTWA"),
         ("Bycetin 20 Gr", "CTWA"),
         ("Zhi Yang Yao Inhaler @ 2 ml", "Order Online"),
+        ("Zhi Yang Yao Spray @ 60 ml", "Order Online"),
+        ("Zhi Yang Yao Spray @ 30 ml", "Order Online"),
+        ("Zhi Yang Yao Roll On @ 4 ml", "Order Online"),
         ("Bio Antanam @10 Kapsul 500 Mg", "Order Online"),
         ("Bycetin 20 Gr", "Order Online"),
     ],

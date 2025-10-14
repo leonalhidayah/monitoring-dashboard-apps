@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -310,8 +311,38 @@ def display_advertiser_dashboard(project_name: str):
 
     st.divider()
     st.subheader("Tren Harian: Gross Revenue vs Spend")
-    time_series_data = df_filtered.groupby("tanggal")[["gross_revenue", "spend"]].sum()
-    st.line_chart(time_series_data)
+
+    time_series_data = (
+        df_filtered.groupby("tanggal")[["gross_revenue", "spend"]].sum().reset_index()
+    )
+
+    fig = px.line(
+        time_series_data,
+        x="tanggal",
+        y=["gross_revenue", "spend"],
+        markers=True,
+        title="Perkembangan Gross Revenue vs Biaya Iklan",
+    )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Jumlah (Rp)",
+        yaxis_tickformat=".2s",
+        legend_title_text="",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5,
+        ),
+    )
+
+    fig.update_traces(
+        hovertemplate="<b>Date:</b> %{x|%d %B %Y}<br><b>Amount:</b> Rp %{y:,.0f}<extra></extra>"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def display_budgeting_dashboard(project_id: int, project_name: str):
@@ -439,10 +470,9 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
                 )
             )
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=60, b=20))
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
         st.divider()
-        # --- Sub-Bagian Metrik Ringkasan ---
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             st.metric(
@@ -467,9 +497,17 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
 
         st.subheader("Total Omset Berjalan vs Ads Spend")
 
+        try:
+            df_ads["tanggal"] = pd.to_datetime(df_ads["tanggal"]).dt.date
+        except Exception as e:
+            st.error(f"Gagal memproses kolom 'tanggal' di df_ads. Detail: {e}")
+            st.stop()
+
+        # Agregasi data harian
         df_omset_daily = (
             df_ads.groupby(["tanggal"])[["total_omset", "total_spending"]]
             .sum()
+            .reset_index()  # PENTING: Ubah index 'tanggal' menjadi kolom biasa
             .rename(
                 columns={
                     "total_omset": "Total Omset Berjalan",
@@ -478,7 +516,39 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
             )
         )
 
-        st.line_chart(df_omset_daily)
+        fig = px.line(
+            df_omset_daily,
+            x="tanggal",
+            y=[
+                "Total Omset Berjalan",
+                "Total Ads Spending",
+            ],
+            markers=True,
+            title="Perkembangan Omset vs Biaya Iklan Harian",
+        )
+
+        # Kustomisasi format tooltip dan sumbu
+        fig.update_traces(
+            # %{y} secara otomatis mengambil nilai dari line yang di-hover
+            hovertemplate="<b>Date:</b> %{x|%d %B %Y}<br><b>Amount:</b> Rp %{y:,.0f}<extra></extra>"
+        )
+
+        fig.update_layout(
+            xaxis_title="Tanggal",
+            yaxis_title="Jumlah (Rp)",
+            yaxis_tickformat=".2s",
+            legend_title_text="",
+            legend=dict(
+                orientation="h",  # 'h' untuk horizontal
+                yanchor="bottom",
+                y=1.02,
+                xanchor="center",
+                x=0.5,
+            ),
+        )
+
+        # Menampilkan chart di Streamlit
+        st.plotly_chart(fig, use_container_width=True)
 
         st.divider()
 
@@ -816,8 +886,37 @@ def display_advertiser_cpas_dashboard(project_name: str):
 
     st.divider()
     st.subheader("Tren Harian: Gross Revenue vs Spend")
-    time_series_data = df_filtered.groupby("tanggal")[["gross_revenue", "spend"]].sum()
-    st.line_chart(time_series_data)
+    time_series_data = (
+        df_filtered.groupby("tanggal")[["gross_revenue", "spend"]].sum().reset_index()
+    )
+
+    fig = px.line(
+        time_series_data,
+        x="tanggal",
+        y=["gross_revenue", "spend"],
+        markers=True,
+        title="Perkembangan Gross Revenue vs Biaya Iklan",
+    )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Jumlah (Rp)",
+        yaxis_tickformat=".2s",
+        legend_title_text="",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5,
+        ),
+    )
+
+    fig.update_traces(
+        hovertemplate="<b>Date:</b> %{x|%d %B %Y}<br><b>Amount:</b> Rp %{y:,.0f}<extra></extra>"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_team_regular_tab(team_name, full_df, conn):
@@ -1186,7 +1285,7 @@ def display_budgeting_regular_dashboard(project_id: int, project_name: str):
                 )
             )
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=60, b=20))
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
         st.divider()
         # --- Sub-Bagian Metrik Ringkasan ---

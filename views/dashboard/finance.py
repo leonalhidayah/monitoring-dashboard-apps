@@ -2,6 +2,8 @@ from datetime import date
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -167,16 +169,85 @@ if selected_project:
 
         st.subheader("Total Omset Daily")
 
-        df_akrual_daily = df.groupby(["tanggal"])["akrual_basis"].sum()
-        df_cash_daily = df.groupby(["tanggal"])["cash_basis"].sum()
+        try:
+            df["tanggal"] = pd.to_datetime(df["tanggal"]).dt.date
+        except Exception as e:
+            st.error(f"Gagal mengubah kolom 'tanggal' menjadi datetime. Error: {e}")
+            st.info(
+                "Pastikan format tanggal di data Anda konsisten, contoh: 'YYYY-MM-DD'."
+            )
+            st.stop()
+
+        df_akrual_daily = df.groupby(["tanggal"])["akrual_basis"].sum().reset_index()
+        df_cash_daily = df.groupby(["tanggal"])["cash_basis"].sum().reset_index()
 
         load_css()
 
         akrual_tab, cash_tab = st.tabs(["Akrual", "Cash"])
+
+        # --- TAB AKRUAL ---
         with akrual_tab:
-            st.line_chart(df_akrual_daily)
+            # Membuat grafik dengan Plotly Express
+            fig_akrual = px.line(
+                df_akrual_daily,
+                x="tanggal",
+                y="akrual_basis",
+                markers=True,
+                title="Perkembangan Pendapatan Akrual",
+            )
+
+            # Kustomisasi format tooltip dan sumbu
+            fig_akrual.update_traces(
+                hovertemplate="<b>Tanggal:</b> %{x|%d %B %Y}<br><b>Jumlah:</b> Rp %{y:,.0f}<extra></extra>"
+            )
+            fig_akrual.update_layout(
+                xaxis_title="Tanggal",
+                yaxis_title="Pendapatan (Rp)",
+                yaxis_tickformat=".2s",
+            )
+
+            st.plotly_chart(fig_akrual, use_container_width=True)
+
+            with st.expander("Lihat Data Mentah (Akrual)"):
+                styled_akrual_df = df_akrual_daily.style.format(
+                    {
+                        "tanggal": lambda x: x.strftime("%d %B %Y"),
+                        "akrual_basis": lambda x: f"Rp {x:,.0f}",
+                    }
+                )
+
+                st.dataframe(styled_akrual_df)
+
+        # --- TAB CASH ---
         with cash_tab:
-            st.line_chart(df_cash_daily)
+            fig_cash = px.line(
+                df_cash_daily,
+                x="tanggal",
+                y="cash_basis",
+                markers=True,
+                title="Perkembangan Pendapatan Cash",
+            )
+
+            fig_cash.update_traces(
+                hovertemplate="<b>Tanggal:</b> %{x|%d %B %Y}<br><b>Jumlah:</b> Rp %{y:,.0f}<extra></extra>"
+            )
+            fig_cash.update_layout(
+                xaxis_title="Tanggal",
+                yaxis_title="Pendapatan (Rp)",
+                yaxis_tickformat=".2s",
+            )
+
+            st.plotly_chart(fig_cash, use_container_width=True)
+
+            with st.expander("Lihat Data Mentah (Cash)"):
+                styled_cash_df = df_cash_daily.style.format(
+                    {
+                        "tanggal": lambda x: x.strftime("%d %B %Y"),
+                        "cash_basis": lambda x: f"Rp {x:,.0f}",
+                    }
+                )
+
+                st.dataframe(styled_cash_df)
 
         st.divider()
 
@@ -206,7 +277,7 @@ if selected_project:
                 number={"suffix": "%", "font": {"size": 40}},
                 gauge={
                     "axis": {"range": [0, monitoring * 1.5]},
-                    "bar": {"color": bar_color},  # warna batang utama
+                    "bar": {"color": bar_color},
                     "steps": [
                         {
                             "range": [0, 100],
@@ -223,8 +294,6 @@ if selected_project:
                 domain={"x": [0, 1], "y": [0, 1]},
             )
         )
-
-        # st.plotly_chart(fig, use_container_width=True)
 
         fig.update_layout(height=250, margin=dict(l=20, r=20, t=60, b=20))
 

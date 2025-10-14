@@ -64,6 +64,25 @@ def get_dim_marketplaces():
     )
 
 
+def get_dim_platforms():
+    """Mengambil semua data dari tabel dim_platforms."""
+    return get_table_data(table_name="dim_platforms", order_by_column="platform_id")
+
+
+def get_dim_topup_account_regular():
+    """Mengambil semua data dari tabel dim_topup_account_regular."""
+    return get_table_data(
+        table_name="dim_topup_account_regular", order_by_column="account_id"
+    )
+
+
+def get_dim_cpas_accounts():
+    """Mengambil semua data dari tabel vw_cpas_account_with_store_name."""
+    return get_table_data(
+        table_name="vw_cpas_account_with_store_name", order_by_column="cpas_id"
+    )
+
+
 def get_dim_brands():
     """Mengambil semua data dari tabel dim_brands."""
     return get_table_data(table_name="dim_brands", order_by_column="nama_brand")
@@ -1512,7 +1531,7 @@ def insert_budget_non_ads_fo_data(data: pd.DataFrame):
         )
         return {
             "status": "success",
-            "message": f"{len(records)} records finance_omset berhasil disimpan atau diperbarui.",
+            "message": f"{len(records)} records finance_budget_non_ads_fo berhasil disimpan atau diperbarui.",
         }
 
     except (Exception, psycopg2.DatabaseError) as error:
