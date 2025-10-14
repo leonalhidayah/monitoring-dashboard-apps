@@ -46,6 +46,11 @@ finance_pages = {
         title="Cashflow",
         icon=":material/account_balance_wallet:",
     ),
+    "finance_data_management": st.Page(
+        "views/finance/finance_data_management.py",
+        title="Data Management",
+        icon=":material/database:",
+    ),
 }
 admin_pages = {
     "marketplace": st.Page(
