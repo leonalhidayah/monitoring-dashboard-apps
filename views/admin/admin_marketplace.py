@@ -10,8 +10,6 @@ from database import db_manager
 from views.config import get_now_in_jakarta
 from views.style import load_css
 
-NOW_IN_JAKARTA = get_now_in_jakarta()
-
 warnings.filterwarnings("ignore")
 
 load_css()
@@ -46,10 +44,10 @@ with admin_marketplace_tab:
 
             # Simpan default ke session_state hanya sekali
             if "selected_date" not in st.session_state:
-                st.session_state.selected_date = NOW_IN_JAKARTA.date()
+                st.session_state.selected_date = get_now_in_jakarta().date()
 
             if "selected_time" not in st.session_state:
-                st.session_state.selected_time = NOW_IN_JAKARTA.time()
+                st.session_state.selected_time = get_now_in_jakarta().time()
 
             selected_date = st.date_input(
                 "Pilih tanggal input",
@@ -507,7 +505,7 @@ with pesanan_khusus_marketplace_page:
     st.subheader("Input Manual Pesanan Khusus")
 
     with st.form("special_order_form"):
-        tanggal_input = st.date_input("Tanggal Input", value=NOW_IN_JAKARTA)
+        tanggal_input = st.date_input("Tanggal Input", value=get_now_in_jakarta())
         kategori_pesanan = st.selectbox(
             "Pilih Kategori Pesanan",
             ("RETURN", "FIKTIF_ORDER", "AFFILIATE", "CANCEL", "LAINNYA"),

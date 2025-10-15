@@ -19,8 +19,6 @@ from views.config import (
     get_yesterday_in_jakarta,
 )
 
-YESTERDAY_IN_JAKARTA = get_yesterday_in_jakarta()
-
 
 # -- ORDERS DATA
 def clean_admin_marketplace_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -274,7 +272,7 @@ def initialize_omset_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                YESTERDAY_IN_JAKARTA,
+                get_yesterday_in_jakarta(),
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -336,7 +334,7 @@ def initialize_omset_reg_data_session(project_name):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                YESTERDAY_IN_JAKARTA,
+                get_yesterday_in_jakarta(),
                 index=range(len(PLATFORM_REGULAR)),
             ),
             "Platform": PLATFORM_REGULAR,
@@ -396,7 +394,7 @@ def initialize_ads_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                YESTERDAY_IN_JAKARTA,
+                get_yesterday_in_jakarta(),
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -452,7 +450,7 @@ def initialize_finance_cpas_data_session(project_name, store_list, akun_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                YESTERDAY_IN_JAKARTA,
+                get_yesterday_in_jakarta(),
                 index=range(len(akun_list)),
             ),
             "Nama Toko": store_list,
@@ -499,7 +497,7 @@ def initialize_non_ads_lainnya_data_session():
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(YESTERDAY_IN_JAKARTA, index=range(1)),
+            "Tanggal": pd.Series(get_yesterday_in_jakarta(), index=range(1)),
             "Nama Project": ["Enzhico"],
             "Keterangan": ["Talent"],
             "Nominal Aktual Non Ads": [0.0],
@@ -515,7 +513,7 @@ def get_non_ads_lainnya_column_config():
         "Tanggal": st.column_config.DateColumn(
             "Tanggal",
             min_value=pd.Timestamp(2023, 1, 1),
-            default=YESTERDAY_IN_JAKARTA,
+            default=get_yesterday_in_jakarta(),
             format="YYYY-MM-DD",
             required=True,
         ),
@@ -547,7 +545,7 @@ def initialize_non_ads_data_session(project_name, marketplace_list, store_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                YESTERDAY_IN_JAKARTA,
+                get_yesterday_in_jakarta(),
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -596,7 +594,7 @@ def initialize__ads_reg_data_session(branch_name):
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(YESTERDAY_IN_JAKARTA, index=range(3)),
+            "Tanggal": pd.Series(get_yesterday_in_jakarta(), index=range(3)),
             "Akun": AKUN_REGULAR,
             "Nominal Aktual Ads": None,
         }
@@ -634,7 +632,7 @@ def initialize_stock_data_session():
     if session_key not in st.session_state:
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
-            "Tanggal": pd.Series(YESTERDAY_IN_JAKARTA, index=range(5)),
+            "Tanggal": pd.Series(get_yesterday_in_jakarta(), index=range(5)),
             "Marketplace": None,
             "Nama Toko": None,
             "Nominal Budget Ads": [0.0] * 5,
@@ -690,7 +688,7 @@ def initialize_marketplace_data_session(project_name, marketplace_list, store_li
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                YESTERDAY_IN_JAKARTA,
+                get_yesterday_in_jakarta(),
                 index=range(len(store_list)),
             ),
             "Marketplace": marketplace_list,
@@ -766,7 +764,7 @@ def initialize_cpas_data_session(project_name, store_list, akun_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                YESTERDAY_IN_JAKARTA,
+                get_yesterday_in_jakarta(),
                 index=range(len(akun_list)),
             ),
             "Nama Toko": store_list,
@@ -1297,7 +1295,7 @@ def initialize_adv_reg_data_session(platform, project_list, produk_list):
         # Buat DataFrame default dengan kolom yang dibutuhkan
         data = {
             "Tanggal": pd.Series(
-                YESTERDAY_IN_JAKARTA,
+                get_yesterday_in_jakarta(),
                 index=range(len(produk_list)),
             ),
             "Produk": project_list,

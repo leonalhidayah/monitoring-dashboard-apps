@@ -39,9 +39,6 @@ from database.db_manager import (
 from views.config import REG_MAP_PROJECT, get_now_in_jakarta, get_yesterday_in_jakarta
 from views.style import load_css
 
-YESTERDAY_IN_JAKARTA = get_yesterday_in_jakarta()
-NOW_IN_JAKARTA = get_now_in_jakarta()
-
 
 def render_marketplace_page(project_name: str, project_config: dict):
     mp_list = project_config["Marketplace"]
@@ -927,7 +924,7 @@ def render_team_regular_tab(team_name, full_df, conn):
     with st.container(border=True):
         st.markdown("#### Generate Template Harian")
         template_date = st.date_input(
-            "Pilih Tanggal", value=YESTERDAY_IN_JAKARTA, key=f"date_{team_name}"
+            "Pilih Tanggal", value=get_yesterday_in_jakarta(), key=f"date_{team_name}"
         )
         if st.button(
             "Buat Template Harian",
@@ -1015,7 +1012,7 @@ def render_team_regular_tab(team_name, full_df, conn):
         ),
         column_config={
             "performance_date": st.column_config.DateColumn(
-                "Tanggal", required=True, default=YESTERDAY_IN_JAKARTA
+                "Tanggal", required=True, default=get_yesterday_in_jakarta()
             ),
             "product_name": st.column_config.SelectboxColumn(
                 "Nama Produk", required=True, options=team_products
@@ -1120,7 +1117,7 @@ def render_order_flag_editor(conn):
             "id_flag": None,
             "timestamp_created": None,
             "tanggal_input": st.column_config.DateColumn(
-                "Tanggal", required=True, default=NOW_IN_JAKARTA
+                "Tanggal", required=True, default=get_now_in_jakarta()
             ),
             "kategori": st.column_config.SelectboxColumn(
                 "Kategori",

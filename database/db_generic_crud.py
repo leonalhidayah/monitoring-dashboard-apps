@@ -24,12 +24,9 @@ def fetch_table_data(conn, source_view: str) -> pd.DataFrame:
     """
     logging.info(f"Fetching data from table: {source_view}...")
     try:
-        # Menggunakan ORDER BY 1 DESC sebagai default yang aman, biasanya PK atau tanggal.
         query = f"SELECT * FROM {source_view} ORDER BY 1 DESC;"
         df = pd.read_sql(query, conn)
 
-        # Konversi otomatis kolom-kolom yang mengandung 'tanggal' atau '_date'
-        # agar sesuai dengan format yang dibutuhkan Streamlit.
         for col in df.columns:
             if "tanggal" in col or "_date" in col:
                 if pd.api.types.is_datetime64_any_dtype(df[col]):
@@ -39,7 +36,7 @@ def fetch_table_data(conn, source_view: str) -> pd.DataFrame:
         return df
     except Exception as e:
         logging.error(f"Failed to fetch data from {source_view}: {e}")
-        return pd.DataFrame()  # Kembalikan DataFrame kosong jika gagal
+        return pd.DataFrame()
 
 
 def process_generic_changes(
@@ -58,7 +55,6 @@ def process_generic_changes(
     """
     cursor = conn.cursor()
     target_table = config.get("target_table", config.get("table_name"))
-    # Tentukan primary key, baik tunggal ('id_column') maupun ganda ('primary_keys')
     primary_keys = config.get("primary_keys", [config.get("id_column")])
 
     logging.info(
@@ -66,14 +62,12 @@ def process_generic_changes(
     )
 
     try:
-        # --- 1. PROSES PENGHAPUSAN ---
         if "deleted_rows" in changes and changes["deleted_rows"]:
             for index in changes["deleted_rows"]:
                 row_to_delete = original_df.iloc[index]
                 where_clauses = [f"{key} = %s" for key in primary_keys]
                 where_sql = " AND ".join(where_clauses)
 
-                # Ambil nilai PK dan konversi tipe data jika perlu (misal: dari numpy.int64)
                 pk_values = tuple(row_to_delete[key] for key in primary_keys)
 
                 logging.debug(
@@ -83,17 +77,15 @@ def process_generic_changes(
                     f"DELETE FROM {target_table} WHERE {where_sql}", pk_values
                 )
 
-        # --- 2. PROSES PENAMBAHAN ---
         if "added_rows" in changes and changes["added_rows"]:
             for new_row in changes["added_rows"]:
-                # Hanya ambil kolom yang benar-benar ada di tabel dan tidak kosong
                 columns = [
                     col
                     for col in new_row.keys()
                     if col in original_df.columns and new_row[col] is not None
                 ]
                 if not columns:
-                    continue  # Lewati jika baris tambahan kosong
+                    continue
 
                 placeholders = ", ".join(["%s"] * len(columns))
                 column_names = ", ".join(columns)
@@ -105,7 +97,6 @@ def process_generic_changes(
                 )
                 cursor.execute(query, values)
 
-        # --- 3. PROSES PENGEDITAN ---
         if "edited_rows" in changes and changes["edited_rows"]:
             for index, updates in changes["edited_rows"].items():
                 original_row = original_df.iloc[int(index)]

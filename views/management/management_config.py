@@ -30,7 +30,6 @@ TOPUP_AKUN_REGULAR = set(get_dim_topup_account_regular()["nama_akun"].tolist())
 AKUN_CPAS_LIST = set(get_dim_cpas_accounts()["nama_akun_cpas"].tolist())
 STORE_WITH_CPAS_LIST = set(get_dim_cpas_accounts()["nama_toko"].tolist())
 PROJECT_LIST = set(get_dim_projects()["project_name"].tolist())
-YESTERDAY_IN_JAKARTA = get_yesterday_in_jakarta()
 
 
 # =============================================================================
@@ -110,7 +109,7 @@ FINANCE_TABLE_CONFIGS = {
                 "Tanggal",
                 format="YYYY-MM-DD",
                 required=True,
-                default=YESTERDAY_IN_JAKARTA,
+                default=get_yesterday_in_jakarta(),
             ),
             "marketplace": st.column_config.SelectboxColumn(
                 "Marketplace",
@@ -173,7 +172,7 @@ FINANCE_TABLE_CONFIGS = {
                 "Tanggal",
                 format="YYYY-MM-DD",
                 required=True,
-                default=YESTERDAY_IN_JAKARTA,
+                default=get_yesterday_in_jakarta(),
             ),
             "platform": st.column_config.SelectboxColumn(
                 "Platform",
@@ -248,7 +247,7 @@ FINANCE_TABLE_CONFIGS = {
                 "Tanggal",
                 format="YYYY-MM-DD",
                 required=True,
-                default=YESTERDAY_IN_JAKARTA,
+                default=get_yesterday_in_jakarta(),
             ),
             "marketplace": st.column_config.SelectboxColumn(
                 "Marketplace",
@@ -321,7 +320,7 @@ FINANCE_TABLE_CONFIGS = {
                 "Tanggal",
                 format="YYYY-MM-DD",
                 required=True,
-                default=YESTERDAY_IN_JAKARTA,
+                default=get_yesterday_in_jakarta(),
             ),
             "nama_toko": st.column_config.SelectboxColumn(
                 "Nama Toko",
@@ -374,7 +373,7 @@ FINANCE_TABLE_CONFIGS = {
                 "Tanggal",
                 format="YYYY-MM-DD",
                 required=True,
-                default=YESTERDAY_IN_JAKARTA,
+                default=get_yesterday_in_jakarta(),
             ),
             "akun": st.column_config.SelectboxColumn(
                 "Akun",
@@ -442,7 +441,7 @@ FINANCE_TABLE_CONFIGS = {
                 "Tanggal",
                 format="YYYY-MM-DD",
                 required=True,
-                default=YESTERDAY_IN_JAKARTA,
+                default=get_yesterday_in_jakarta(),
             ),
             "marketplace": st.column_config.SelectboxColumn(
                 "Marketplace",
@@ -497,7 +496,7 @@ FINANCE_TABLE_CONFIGS = {
                 "Tanggal",
                 format="YYYY-MM-DD",
                 required=True,
-                default=YESTERDAY_IN_JAKARTA,
+                default=get_yesterday_in_jakarta(),
             ),
             "nama_project": st.column_config.SelectboxColumn(
                 "Nama Project",

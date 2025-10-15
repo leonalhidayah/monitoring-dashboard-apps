@@ -4,15 +4,7 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
-# Impor "mesin otot" database yang sudah kita buat
 from database.db_generic_crud import fetch_table_data, process_generic_changes
-
-# =============================================================================
-# MESIN UI GENERIK (RENDERER)
-# =============================================================================
-# Modul ini berisi fungsi "wajah" yang secara dinamis membangun halaman
-# Data Management berdasarkan "blueprint" (konfigurasi) yang diberikan.
-# =============================================================================
 
 
 def render_generic_editor(conn, config: dict):
@@ -39,12 +31,10 @@ def render_generic_editor(conn, config: dict):
     st.header(f"⚙️ Manajemen Data: {display_name}")
     st.divider()
 
-    # --- 2. PEMBUATAN FILTER DINAMIS ---
     st.markdown("### 🔎 Filter Data")
 
     filter_values = {}
     filter_configs = config.get("filters", [])
-    # Menggunakan st.columns(1) untuk membuat satu kolom filter utama
     filter_cols = st.columns(len(filter_configs) if filter_configs else 1)
 
     if not filter_configs:
@@ -55,7 +45,6 @@ def render_generic_editor(conn, config: dict):
             col_name = f_config["column_name"]
             label = f_config["label"]
 
-            # ===== BLOK KODE YANG DIPERBAIKI UNTUK DATE RANGE =====
             if f_config["filter_type"] == "date_range":
                 default_start = (
                     full_df[col_name].min()
@@ -68,25 +57,20 @@ def render_generic_editor(conn, config: dict):
                     else date.today()
                 )
 
-                # Menggunakan satu st.date_input dengan value berupa tuple untuk membuat range picker
                 date_range_val = st.date_input(
                     label,
                     value=(default_start, default_end),
                     key=f"daterange_{table_key}_{col_name}",
                 )
 
-                # Menangani kasus jika pengguna baru memilih satu tanggal (input belum lengkap)
                 if len(date_range_val) == 1:
                     st.warning(
                         "☝️ Harap pilih tanggal akhir untuk menyelesaikan rentang.",
                         icon="⚠️",
                     )
-                    # Hentikan eksekusi sisa halaman agar tidak terjadi error filter
                     st.stop()
 
-                # Simpan rentang tanggal yang valid (sudah lengkap)
                 filter_values[col_name] = date_range_val
-            # ===== AKHIR BLOK KODE YANG DIPERBAIKI =====
 
             elif f_config["filter_type"] == "selectbox":
                 options = []
