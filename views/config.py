@@ -320,6 +320,7 @@ TOKO_BANDUNG = [
     "SP erassgo bandung",
     "SP juwara herbal official store",
     "TT juwaraherbal",
+    "SP kudaku store",
 ]
 
 

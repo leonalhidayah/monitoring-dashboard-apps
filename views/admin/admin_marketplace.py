@@ -5,44 +5,196 @@ import warnings
 import pandas as pd
 import streamlit as st
 
+# Asumsikan fungsi-fungsi ini ada di file lain
 from data_preprocessor.utils import add_new_columns, clean_admin_marketplace_data
 from database import db_manager
 from views.config import get_now_in_jakarta
 from views.style import load_css
 
 warnings.filterwarnings("ignore")
-
 load_css()
 
-st.header("Data Entry Harian Admin Marketplace")
+# =============================================================================
+# DEFINISI KONSTANTA & FUNGSI HELPER
+# Memusatkan daftar kolom dan logika berulang
+# =============================================================================
 
-(
-    admin_marketplace_tab,
-    pesanan_khusus_marketplace_page,
-) = st.tabs(["Marketplace", "Pesanan Khusus"])
+# Definisikan daftar kolom sebagai konstanta agar mudah dirawat
+CUSTOMER_KEY_COLS = ["nama_pembeli", "no_telepon", "alamat_lengkap"]
+ORDER_ITEMS_FINAL_COLS = [
+    "order_id",
+    "product_id",
+    "store_id",
+    "jumlah",
+    "harga_satuan",
+    "subtotal_produk",
+    "diskon_penjual",
+    "voucher",
+    "voucher_toko",
+]
+NUMERIC_COLS_FOR_AGG = [
+    "jumlah",
+    "harga_satuan",
+    "subtotal_produk",
+    "diskon_penjual",
+    "voucher",
+    "voucher_toko",
+]
+
+
+def load_data_from_uploader(uploaded_file):
+    """Membaca file yang diunggah dan mengembalikannya sebagai DataFrame."""
+    try:
+        if uploaded_file.name.endswith(".csv"):
+            # Biarkan pandas mendeteksi tipe data, lalu kita perbaiki nanti
+            return pd.read_csv(uploaded_file, dtype=str)
+        else:
+            return pd.read_excel(uploaded_file, dtype=str)
+    except Exception as e:
+        st.error(f"Gagal membaca file: {e}")
+        return None
+
+
+def insert_and_notify(df, table_name, columns, conflict_cols, update_cols=None):
+    """Fungsi pembungkus untuk insert data dan notifikasi UI (dipindah ke luar)."""
+    result = db_manager.insert_orders_to_normalized_table(
+        df,
+        table_name,
+        columns,
+        conflict_cols=conflict_cols,
+        update_cols=update_cols,
+        # Default-nya tidak lagi drop duplicates di level ini
+        drop_duplicates_row=False,
+    )
+    if result and result.get("status") == "success":
+        st.success(result["message"])
+    else:
+        st.error(
+            f"Gagal menyimpan data ke '{table_name}': {result.get('message', 'Error tidak diketahui')}"
+        )
+
+
+def run_etl_pipeline(df_raw, selected_date, selected_time, selected_sesi):
+    """Fungsi utama yang menjalankan seluruh proses ETL."""
+
+    # 1. TRANSFORMASI AWAL
+    st.info("Membersihkan dan memperkaya data mentah...")
+    df_clean = clean_admin_marketplace_data(df_raw)
+    df_enriched = add_new_columns(df_clean)
+
+    timestamp_input = datetime.datetime.combine(selected_date, selected_time)
+    df_enriched["timestamp_input_data"] = timestamp_input
+    df_enriched["sesi"] = selected_sesi
+    df_enriched.replace({pd.NaT: None}, inplace=True)
+    st.success("Data mentah berhasil diproses.")
+
+    # 2. LOAD DIMENSI DASAR
+    st.info("Memproses tabel dimensi dasar (brand, marketplace, dll)...")
+    dimension_tables = {
+        "dim_brands": ["nama_brand"],
+        "dim_marketplaces": ["nama_marketplace"],
+        "dim_shipping_services": ["jasa_kirim"],
+        "dim_payment_methods": ["metode_pembayaran"],
+    }
+    for table_name, cols in dimension_tables.items():
+        df_dim = df_enriched[cols].drop_duplicates().dropna()
+        insert_and_notify(df_dim, table_name, columns=cols, conflict_cols=cols)
+
+    # 3. MAPPING & ENRICHMENT LANJUTAN
+    st.info("Mengambil data mapping dari database...")
+    df_products_map = db_manager.get_products()[["sku", "product_id"]]
+    df_stores_map = db_manager.get_dim_stores()[["nama_toko", "store_id"]]
+    df_customer_map = db_manager.get_customers()
+
+    df_mapped = pd.merge(df_enriched, df_products_map, on="sku", how="left")
+    df_mapped = pd.merge(df_mapped, df_stores_map, on="nama_toko", how="left")
+    df_mapped = pd.merge(df_mapped, df_customer_map, on=CUSTOMER_KEY_COLS, how="left")
+
+    # Handle unmapped data
+    df_mapped.dropna(subset=["product_id"], inplace=True)
+    df_mapped["customer_id"].fillna(9999, inplace=True)
+    df_mapped[["product_id", "customer_id"]] = df_mapped[
+        ["product_id", "customer_id"]
+    ].astype(int)
+    st.success("Mapping ID produk dan customer selesai.")
+
+    # 4. LOAD TABEL FAKTA & DIMENSI KOMPLEKS
+    # PROSES CUSTOMERS
+    df_customers = df_mapped[CUSTOMER_KEY_COLS].drop_duplicates().dropna()
+    insert_and_notify(
+        df_customers,
+        "customers",
+        columns=CUSTOMER_KEY_COLS,
+        conflict_cols=CUSTOMER_KEY_COLS,
+    )
+
+    # PROSES ORDERS
+    df_orders = df_mapped.groupby("order_id").first().reset_index()
+    orders_cols = [
+        col
+        for col in df_orders.columns
+        if col in db_manager.get_table_columns("orders")
+    ]
+    insert_and_notify(
+        df_orders, "orders", columns=orders_cols, conflict_cols=["order_id"]
+    )
+
+    # PROSES ORDER_ITEMS (Bagian Paling Kritis)
+    st.info("Memproses tabel order_items dengan agregasi varian...")
+    df_order_items = df_mapped[ORDER_ITEMS_FINAL_COLS].copy()
+
+    # Konversi tipe data ke numerik SEBELUM agregasi
+    for col in NUMERIC_COLS_FOR_AGG:
+        df_order_items[col] = pd.to_numeric(
+            df_order_items[col], errors="coerce"
+        ).fillna(0)
+
+    # Agregasi untuk menangani produk varian
+    grouping_keys = ["order_id", "product_id", "store_id"]
+    agg_rules = {
+        "jumlah": "sum",
+        "harga_satuan": "mean",
+        "subtotal_produk": "sum",
+        "diskon_penjual": "sum",
+        "voucher": "sum",
+        "voucher_toko": "sum",
+    }
+    df_oi_agg = df_order_items.groupby(grouping_keys).agg(agg_rules).reset_index()
+
+    # DENGAN ASUMSI UNIQUE INDEX TELAH DIBUAT DI DATABASE
+    # ON CONFLICT akan mencegah duplikasi jika file yang sama di-upload ulang
+    conflict_cols_oi = ["order_id", "product_id", "store_id"]
+    insert_and_notify(
+        df_oi_agg,
+        "order_items",
+        columns=ORDER_ITEMS_FINAL_COLS,
+        conflict_cols=conflict_cols_oi,
+    )
+
+    st.success("✅ Semua data berhasil diproses dan disimpan ke database!")
+    st.balloons()
+
+
+# =============================================================================
+# UI STREAMLIT
+# =============================================================================
+
+st.header("Data Entry Harian Admin Marketplace")
+admin_marketplace_tab, pesanan_khusus_marketplace_page = st.tabs(
+    ["Marketplace", "Pesanan Khusus"]
+)
 
 with admin_marketplace_tab:
     st.subheader("Unggah Data Admin Marketplace")
-    st.markdown("""
-        **Cara Ekspor Data dari BigSeller:**
-        - Pastikan Jenis Ekspor: Ekspor Berdasarkan SKU Toko
-        - Pastikan Jenis Template: Template Standar
-    """)
-
     uploaded_file = st.file_uploader(
         "Upload file CSV atau Excel dari BigSeller", type=["csv", "xlsx"]
     )
 
-    if uploaded_file is not None:
-        try:
-            if uploaded_file.name.endswith(".csv"):
-                df_raw = pd.read_csv(uploaded_file, dtype=str)
-            else:
-                df_raw = pd.read_excel(uploaded_file, dtype=str)
+    if uploaded_file:
+        df_raw = load_data_from_uploader(uploaded_file)
 
+        if df_raw is not None:
             st.info("File berhasil diunggah. Silakan lengkapi data di bawah ini.")
-
-            # Simpan default ke session_state hanya sekali
             if "selected_date" not in st.session_state:
                 st.session_state.selected_date = get_now_in_jakarta().date()
 
@@ -58,447 +210,17 @@ with admin_marketplace_tab:
                 "Pilih waktu input",
                 key="selected_time",
             )
-
-            # Definisikan opsi untuk sesi
-            list_sesi = ["SESI 1", "SESI 2", "SESI 3", "SESI 4"]
-
-            # Buat selectbox untuk memilih sesi
             selected_sesi = st.selectbox(
-                "Pilih Sesi",  # Label diubah agar lebih jelas
-                options=list_sesi,  # Menambahkan opsi sesi
-                key="selected_sesi",  # Key diubah agar lebih deskriptif
+                "Pilih Sesi", options=["SESI 1", "SESI 2", "SESI 3", "SESI 4"]
             )
 
-            # Tombol untuk memproses dan menyimpan data
             if st.button("Proses & Simpan Data"):
-                st.info("Memproses data, mohon tunggu...")
-
-                # Panggil fungsi pembersihan dari utils
-                # Diasumsikan df_raw sudah ada dari file upload
-                df_clean = clean_admin_marketplace_data(df_raw)
-
-                # Panggil fungsi penambahan kolom baru
-                df_final = add_new_columns(df_clean)
-
-                # Gabungkan tanggal dan waktu yang dipilih pengguna untuk membuat timestamp
-                timestamp_input = datetime.datetime.combine(
-                    selected_date, selected_time
-                )
-
-                # Tambahkan kolom timestamp dan sesi ke DataFrame
-                df_final["timestamp_input_data"] = timestamp_input
-                df_final["sesi"] = selected_sesi  # Menggunakan nilai dari selectbox
-
-                # Lanjutkan dengan proses penyimpanan data ke database...
-                # db_manager.save_data(df_final)
-                st.success("Data berhasil diproses dan disimpan!")
-                st.write(df_final.head())
-
-                st.markdown("""---""")
-
-                st.subheader("Data Hasil Pembersihan")
-                st.dataframe(df_final.head())
-
-                # df_final = utils.convert_datetime_to_str(df_final)
-                df_final.replace({pd.NaT: None}, inplace=True)
-
-                def insert_and_notify(
-                    df, table_name, columns, conflict_cols, update_cols=None
+                with st.spinner(
+                    "Memproses file dan menyimpan ke database... Ini mungkin memakan waktu beberapa saat."
                 ):
-                    """
-                    Fungsi untuk memasukkan data ke tabel dan memberikan notifikasi di UI Streamlit.
-
-                    Args:
-                        st: Objek streamlit.
-                        db_manager: Objek database manager Anda.
-                        df (pd.DataFrame): DataFrame yang berisi data.
-                        table_name (str): Nama tabel tujuan.
-                        columns (list): Daftar kolom yang akan dimasukkan.
-                        conflict_cols (list): Daftar kolom untuk penanganan konflik (ON CONFLICT).
-                    """
-                    result = db_manager.insert_orders_to_normalized_table(
-                        df,
-                        table_name,
-                        columns,
-                        drop_duplicates_row=True,
-                        dropna=True,
-                        conflict_cols=conflict_cols,
-                        update_cols=update_cols,
+                    run_etl_pipeline(
+                        df_raw, selected_date, selected_time, selected_sesi
                     )
-
-                    if result["status"] == "success":
-                        st.success(result["message"])
-                    else:
-                        st.error(
-                            f"Gagal menyimpan data ke '{table_name}': {result['message']}"
-                        )
-
-                    # Mengembalikan status untuk penanganan lebih lanjut jika diperlukan
-                    # return result["status"] == "success"
-
-                # PROSES DIMENSI SEDERHANA (tanpa join/mapping)
-                dimension_tables = {
-                    "dim_brands": ["nama_brand"],
-                    "dim_marketplaces": ["nama_marketplace"],
-                    "dim_shipping_services": ["jasa_kirim"],
-                    "dim_payment_methods": ["metode_pembayaran"],
-                }
-
-                st.info("Memproses tabel dimensi dasar...")
-                for table_name, cols in dimension_tables.items():
-                    insert_and_notify(
-                        df_final,
-                        table_name,
-                        columns=cols,
-                        conflict_cols=cols,
-                    )
-
-                # PROSES DIM_STORES (dengan mapping)
-                st.info("Memproses tabel dim_stores...")
-                # Lakukan mapping ID terlebih dahulu
-                dim_marketplaces = db_manager.get_dim_marketplaces()
-                marketplace_mapping = dict(
-                    zip(
-                        dim_marketplaces["nama_marketplace"],
-                        dim_marketplaces["marketplace_id"],
-                    )
-                )
-                df_final["marketplace_id"] = df_final["nama_marketplace"].map(
-                    marketplace_mapping
-                )
-
-                store_cols = ["nama_toko", "marketplace_id"]
-                insert_and_notify(
-                    df_final,
-                    "dim_stores",
-                    columns=store_cols,
-                    conflict_cols=["nama_toko"],
-                )
-
-                # PROSES CUSTOMERS
-                st.info("Memproses tabel customers...")
-                customers_cols = [
-                    "nama_pembeli",
-                    "no_telepon",
-                    "alamat_lengkap",
-                    "kecamatan",
-                    "kelurahan",
-                    "kabupaten_kota",
-                    "provinsi",
-                    "negara",
-                    "kode_pos",
-                ]
-                customers_conflict_cols = [
-                    "nama_pembeli",
-                    "no_telepon",
-                    "alamat_lengkap",
-                ]
-                insert_and_notify(
-                    df_final,
-                    "customers",
-                    columns=customers_cols,
-                    conflict_cols=customers_conflict_cols,
-                )
-
-                # PROSES PRODUCTS (dengan mapping)
-                st.info("Memproses tabel products...")
-                # Lakukan mapping ID terlebih dahulu
-                dim_brands = db_manager.get_dim_brands()
-                brand_mapping = dict(
-                    zip(dim_brands["nama_brand"], dim_brands["brand_id"])
-                )
-                df_final["brand_id"] = df_final["nama_brand"].map(brand_mapping)
-
-                products_cols = ["sku", "nama_produk", "brand_id", "harga_awal_produk"]
-                insert_and_notify(
-                    df_final,
-                    "products",
-                    columns=products_cols,
-                    conflict_cols=["sku"],
-                )
-
-                # PROSES ORDERS (dengan mapping customer_id)
-                st.info("Memproses tabel orders...")
-                df_unique_customers_raw = (
-                    df_final[customers_conflict_cols].drop_duplicates().dropna()
-                )
-
-                df_customer_map = db_manager.get_customers()
-
-                df_final_with_customer_id = pd.merge(
-                    df_final, df_customer_map, on=customers_conflict_cols, how="left"
-                )
-
-                if df_final_with_customer_id["customer_id"].isnull().any():
-                    st.warning(
-                        "Ditemukan customer yang tidak terpetakan, akan di-mapping ke ID 9999 (Unknown)."
-                    )
-
-                    df_final_with_customer_id["customer_id"].fillna(9999, inplace=True)
-
-                    df_final_with_customer_id["customer_id"] = (
-                        df_final_with_customer_id["customer_id"].astype(int)
-                    )
-
-                    st.success("Berhasil memetakan customer kosong ke ID 9999.")
-
-                if not df_final_with_customer_id["customer_id"].isnull().any():
-                    st.success(
-                        "Verifikasi berhasil! Semua baris pesanan kini memiliki customer_id yang valid."
-                    )
-
-                order_level_columns = {
-                    "customer_id": "first",
-                    "order_status": "first",
-                    "is_fake_order": "first",
-                    "waktu_pesanan_dibuat": "first",
-                    "waktu_pesanan_dibayar": "first",
-                    "waktu_kadaluwarsa": "first",
-                    "waktu_proses": "first",
-                    "waktu_selesai": "first",
-                    "waktu_pembatalan": "first",
-                    "yang_membatalkan": "first",
-                    "pesan_dari_pembeli": "first",
-                    "timestamp_input_data": "first",
-                }
-
-                df_orders_normalized = (
-                    df_final_with_customer_id.groupby("order_id")
-                    .agg(order_level_columns)
-                    .reset_index()
-                )
-
-                df_orders_normalized.replace({pd.NaT: None}, inplace=True)
-                df_orders_normalized = df_orders_normalized.astype(object)
-
-                orders_columns = [
-                    "order_id",
-                    "customer_id",
-                    "order_status",
-                    "is_fake_order",
-                    "waktu_pesanan_dibuat",
-                    "waktu_pesanan_dibayar",
-                    "waktu_kadaluwarsa",
-                    "waktu_proses",
-                    "waktu_selesai",
-                    "waktu_pembatalan",
-                    "yang_membatalkan",
-                    "pesan_dari_pembeli",
-                    "timestamp_input_data",
-                ]
-
-                cols_to_update = [
-                    "order_status",
-                    "is_fake_order",
-                    "waktu_proses",
-                    "waktu_selesai",
-                    "waktu_pembatalan",
-                    "yang_membatalkan",
-                    "pesan_dari_pembeli",
-                ]
-
-                insert_and_notify(
-                    df_orders_normalized,
-                    "orders",
-                    columns=orders_columns,
-                    conflict_cols=["order_id"],
-                    update_cols=cols_to_update,
-                )
-
-                st.info("Memproses tabel order_items...")
-
-                df_products_map = db_manager.get_products()[["sku", "product_id"]]
-                df_stores_map = db_manager.get_dim_stores()[["nama_toko", "store_id"]]
-
-                df_mapped = pd.merge(df_final, df_products_map, on="sku", how="left")
-
-                df_mapped = pd.merge(
-                    df_mapped, df_stores_map, on="nama_toko", how="left"
-                )
-
-                if df_mapped[["product_id", "store_id"]].isnull().any().any():
-                    st.warning(
-                        "Ditemukan data yang gagal di-mapping. Baris ini akan dilewati."
-                    )
-                    df_mapped.dropna(subset=["product_id", "store_id"], inplace=True)
-
-                df_mapped["product_id"] = df_mapped["product_id"].astype(int)
-                df_mapped["store_id"] = df_mapped["store_id"].astype(int)
-
-                st.success("Semua foreign keys berhasil di-mapping.")
-
-                final_columns = [
-                    "order_id",
-                    "product_id",
-                    "store_id",
-                    "jumlah",
-                    "harga_satuan",
-                    "subtotal_produk",
-                    "diskon_penjual",
-                    "voucher",
-                    "voucher_toko",
-                ]
-
-                df_order_items_final = df_mapped[final_columns]
-
-                oi_conflict_cols = ["order_id", "product_id", "store_id"]
-
-                insert_and_notify(
-                    df_order_items_final,
-                    "order_items",
-                    columns=final_columns,
-                    conflict_cols=oi_conflict_cols,
-                )
-
-                # TODO: PROSES SHIPMENTS
-                st.info("Memproses tabel shipments...")
-                df_shipping_map = db_manager.get_dim_shipping_services()
-
-                df_mapped = pd.merge(
-                    df_final,
-                    df_shipping_map,
-                    left_on="jasa_kirim",
-                    right_on="jasa_kirim",
-                    how="left",
-                )
-
-                if df_mapped["service_id"].isnull().any():
-                    st.warning(
-                        "Ditemukan jasa kirim yang tidak terpetakan, akan di-mapping ke ID 9999 (Unknown)."
-                    )
-
-                    df_mapped["service_id"].fillna(9999, inplace=True)
-
-                df_mapped["service_id"] = df_mapped["service_id"].astype(int)
-
-                df_shipments_normalized = (
-                    df_mapped.groupby("no_resi")
-                    .agg(
-                        order_id=("order_id", "first"),
-                        service_id=("service_id", "first"),
-                        gudang_asal=("gudang_asal", "first"),
-                        sesi=("sesi", "first"),
-                        ongkos_kirim=("ongkos_kirim", "first"),
-                        diskon_ongkos_kirim_penjual=(
-                            "diskon_ongkos_kirim_penjual",
-                            "first",
-                        ),
-                        diskon_ongkos_kirim_marketplace=(
-                            "diskon_ongkos_kirim_marketplace",
-                            "first",
-                        ),
-                        waktu_cetak=("waktu_cetak", "first"),
-                        waktu_pesanan_dikirim=("waktu_pesanan_dikirim", "first"),
-                    )
-                    .reset_index()
-                )
-
-                st.success("Berhasil mengagregasi data ke level shipment!")
-
-                shipments_columns = [
-                    "order_id",
-                    "no_resi",
-                    "service_id",
-                    "gudang_asal",
-                    "sesi",
-                    "ongkos_kirim",
-                    "diskon_ongkos_kirim_penjual",
-                    "diskon_ongkos_kirim_marketplace",
-                    "waktu_cetak",
-                    "waktu_pesanan_dikirim",
-                ]
-
-                df_shipments_final = df_shipments_normalized[shipments_columns]
-
-                conflict_cols = ["no_resi"]
-
-                update_cols = ["sesi", "waktu_pesanan_dikirim", "waktu_cetak"]
-
-                insert_and_notify(
-                    df_shipments_final,
-                    "shipments",
-                    columns=shipments_columns,
-                    conflict_cols=conflict_cols,
-                    update_cols=update_cols,
-                )
-
-                # PROSES PAYMENTS
-                st.info("Memproses tabel payments...")
-                df_methods_map = db_manager.get_dim_payment_methods()
-
-                # 1. Mapping method_id dari metode_pembayaran
-                df_mapped = pd.merge(
-                    df_final,
-                    df_methods_map,
-                    left_on="metode_pembayaran",
-                    right_on="metode_pembayaran",
-                    how="left",
-                )
-
-                # 2. Tangani metode pembayaran yang tidak ditemukan
-                if df_mapped["method_id"].isnull().any():
-                    st.warning(
-                        "Ditemukan metode pembayaran yang tidak terpetakan, akan di-mapping ke ID 9999 (Unknown)."
-                    )
-
-                    # Ganti semua NaN di kolom method_id dengan 9999
-                    df_mapped["method_id"].fillna(9999, inplace=True)
-
-                df_mapped["method_id"] = df_mapped["method_id"].astype(int)
-
-                df_payments_normalized = (
-                    df_mapped[
-                        [
-                            "order_id",
-                            "method_id",
-                            "total_pesanan",
-                            "biaya_pengelolaan",
-                            "biaya_transaksi",
-                        ]
-                    ]
-                    .drop_duplicates()
-                    .groupby(by=["order_id"])
-                    .agg(
-                        {
-                            "method_id": "first",
-                            "total_pesanan": "sum",
-                            "biaya_pengelolaan": "sum",
-                            "biaya_transaksi": "sum",
-                        }
-                    )
-                    .reset_index()
-                )
-
-                st.success("Berhasil mengagregasi data ke level payment!")
-
-                payments_columns = [
-                    "order_id",
-                    "method_id",
-                    "total_pesanan",
-                    "biaya_pengelolaan",
-                    "biaya_transaksi",
-                ]
-
-                df_payments_final = df_payments_normalized[payments_columns]
-
-                conflict_cols = ["order_id"]
-
-                update_cols = ["biaya_pengelolaan", "biaya_transaksi"]
-
-                insert_and_notify(
-                    df_payments_final,
-                    "payments",
-                    columns=payments_columns,
-                    conflict_cols=conflict_cols,
-                    update_cols=update_cols,
-                )
-
-                # Tampilkan balon hanya sekali di akhir jika semua proses berhasil
-                st.balloons()
-
-        except Exception as e:
-            st.error(f"Terjadi error saat memproses file: {e}")
-            st.warning("Pastikan format file sesuai dengan template BigSeller.")
 
 
 with pesanan_khusus_marketplace_page:

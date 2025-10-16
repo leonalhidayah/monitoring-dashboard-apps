@@ -25,6 +25,7 @@ def get_now_in_jakarta():
 
 MARKETPLACE_LIST = set(get_dim_marketplaces()["nama_marketplace"].tolist())
 STORE_LIST = set(get_dim_stores()["nama_toko"].tolist())
+STORE_LIST_ADV = STORE_LIST | {"SP zhi yang yao (iklan eksternal FB)"}
 PLARFORM_REGULAR = set(get_dim_platforms()["nama_platform"].tolist())
 TOPUP_AKUN_REGULAR = set(get_dim_topup_account_regular()["nama_akun"].tolist())
 AKUN_CPAS_LIST = set(get_dim_cpas_accounts()["nama_akun_cpas"].tolist())
@@ -515,4 +516,100 @@ FINANCE_TABLE_CONFIGS = {
         },
     },
     # --- TAMBAHKAN KONFIGURASI TABEL LAIN DI SINI ---
+}
+
+
+ADVERTISER_TABLE_CONFIGS = {
+    "advertiser_marketplace": {
+        "display_name": "Advertiser Marketplace",
+        "source_view": "vw_advertiser_mp",
+        "target_table": "advertiser_marketplace",
+        "primary_keys": [
+            "tanggal",
+            "nama_toko",
+        ],
+        "filters": [
+            {
+                "column_name": "tanggal",
+                "filter_type": "date_range",
+                "label": "Pilih Rentang Tanggal",
+            },
+            {
+                "column_name": "project_name",
+                "filter_type": "selectbox",
+                "label": "Pilih Project",
+                "options_source": {
+                    "table": "dim_projects",
+                    "column": "project_name",
+                },
+            },
+            {
+                "column_name": "marketplace",
+                "filter_type": "selectbox",
+                "label": "Pilih Marketplace",
+                "options_source": {
+                    "table": "dim_marketplaces",
+                    "column": "nama_marketplace",
+                },
+            },
+            {
+                "column_name": "nama_toko",
+                "filter_type": "selectbox",
+                "label": "Pilih Toko",
+                "options_source": {
+                    "table": "dim_stores",
+                    "column": "nama_toko",
+                },
+            },
+        ],
+        "column_order": [
+            "tanggal",
+            "marketplace",
+            "nama_toko",
+            "spend",
+            "konversi",
+            "produk_terjual",
+            "gross_revenue",
+            "ctr",
+        ],
+        "column_config": {
+            "tanggal": st.column_config.DateColumn(
+                "Tanggal",
+                format="YYYY-MM-DD",
+                required=True,
+                default=get_yesterday_in_jakarta(),
+            ),
+            "marketplace": st.column_config.SelectboxColumn(
+                "Marketplace",
+                options=MARKETPLACE_LIST,
+                required=True,
+            ),
+            "nama_toko": st.column_config.SelectboxColumn(
+                "Nama Toko",
+                options=STORE_LIST_ADV,
+                required=True,
+            ),
+            "spend": st.column_config.NumberColumn(
+                "Spend (Rp)",
+                min_value=0,
+                format="accounting",
+                required=True,
+            ),
+            "konversi": st.column_config.NumberColumn(
+                "Konversi", min_value=0, format="%d"
+            ),
+            "produk_terjual": st.column_config.NumberColumn(
+                "Produk Terjual", min_value=0, format="%d"
+            ),
+            "gross_revenue": st.column_config.NumberColumn(
+                "Gross Revenue (Rp)",
+                min_value=0,
+                format="accounting",
+            ),
+            "ctr": st.column_config.NumberColumn(
+                "CTR",
+                min_value=0.0,
+            ),
+        },
+    },
 }

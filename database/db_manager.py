@@ -3,10 +3,12 @@ import warnings
 from datetime import date
 from typing import List
 
+import numpy as np
 import pandas as pd
 import psycopg2
 import streamlit as st
 from psycopg2 import extras
+from psycopg2.extensions import AsIs, register_adapter
 
 from database.db_connection import get_connection
 
@@ -19,7 +21,53 @@ logging.basicConfig(
 warnings.filterwarnings("ignore")
 
 
-# --- DIM_STORE
+# Adapter untuk tipe data NumPy
+def adapt_numpy_types(numpy_type):
+    return AsIs(numpy_type)
+
+
+# Mendaftarkan adapter untuk semua tipe numerik umum
+register_adapter(np.int64, adapt_numpy_types)
+register_adapter(np.float64, adapt_numpy_types)
+
+
+def get_table_columns(table_name):
+    """
+    Mengambil daftar nama kolom dari sebuah tabel di database PostgreSQL.
+
+    Args:
+        table_name (str): Nama tabel yang ingin diperiksa.
+
+    Returns:
+        list: Daftar nama kolom dalam bentuk string.
+    """
+    conn = None
+    try:
+        conn = get_connection()  # Menggunakan fungsi koneksi Anda yang sudah ada
+        cursor = conn.cursor()
+
+        # Query ini mengambil nama kolom dari katalog informasi standar database
+        query = """
+            SELECT column_name 
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = %s;
+        """
+
+        cursor.execute(query, (table_name,))
+
+        # Mengubah hasil query (list of tuples) menjadi list of strings
+        columns = [row[0] for row in cursor.fetchall()]
+
+        return columns
+    except Exception as e:
+        print(f"Error saat mengambil kolom untuk tabel {table_name}: {e}")
+        return []  # Mengembalikan list kosong jika terjadi error
+    finally:
+        if conn:
+            conn.close()
+
+
+# --- DIm TABLE
 def get_table_data(table_name: str, order_by_column: str = None) -> pd.DataFrame:
     """
     Mengambil semua data dari tabel yang ditentukan secara generik.
@@ -1113,13 +1161,13 @@ def insert_orders_to_normalized_table(
     colnames = ", ".join(columns)
     placeholders = "(" + ", ".join(["%s"] * len(columns)) + ")"
 
-    if conflict_cols:
-        conflict_clause = f"ON CONFLICT ({', '.join(conflict_cols)}) DO NOTHING"
-    elif conflict_clause and update_cols:
+    if conflict_cols and update_cols:
+        update_statement = ", ".join([f"{col} = EXCLUDED.{col}" for col in update_cols])
         conflict_clause = (
-            f"ON CONFLICT ({', '.join(conflict_cols)}) DO UPDATE SET "
-            + ", ".join([f"{col} = EXCLUDED.{col}" for col in update_cols])
+            f"ON CONFLICT ({', '.join(conflict_cols)}) DO UPDATE SET {update_statement}"
         )
+    elif conflict_cols:
+        conflict_clause = f"ON CONFLICT ({', '.join(conflict_cols)}) DO NOTHING"
     else:
         conflict_clause = ""
 

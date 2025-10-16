@@ -37,7 +37,7 @@ from database.db_manager import (
     process_flag_changes_reg,
 )
 from views.config import REG_MAP_PROJECT, get_now_in_jakarta, get_yesterday_in_jakarta
-from views.style import load_css
+from views.style import format_rupiah, load_css
 
 
 def render_marketplace_page(project_name: str, project_config: dict):
@@ -549,19 +549,33 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
 
         st.divider()
 
-        # Tampilkan tabel detail performa iklan
-        st.subheader("Detail Performa Iklan per Toko")
-        st.dataframe(
+        def highlight_status(val):
+            color = "lightgreen" if val == "Normal" else "tomato"
+            return f"background-color: {color}; color: black; font-weight: bold; text-align: center;"
+
+        # Terapkan styling ke DataFrame
+        styled_df = (
             df_ads.style.format(
                 {
-                    "total_omset": "Rp {:,.0f}",
-                    "total_spending": "Rp {:,.0f}",
+                    "total_omset": format_rupiah,
+                    "total_spending": format_rupiah,
                     "ads_spend_percentage": "{:.2f}%",
                     "target_rasio": "{:.2f}%",
                 }
-            ),
-            width="stretch",
+            )
+            .applymap(highlight_status, subset=["status"])
+            .set_properties(
+                **{
+                    "text-align": "center",
+                    "border": "1px solid #ccc",
+                    "border-radius": "4px",
+                    "padding": "6px",
+                }
+            )
         )
+
+        st.subheader("Detail Performa Iklan per Toko")
+        st.dataframe(styled_df, width="stretch")
 
 
 def display_admin_dashboard(project_name: str):
@@ -1021,7 +1035,7 @@ def render_team_regular_tab(team_name, full_df, conn):
                 "Channel", options=["CTWA", "Order Online"], required=True
             ),
             "spend": st.column_config.NumberColumn("Spend", format="accounting"),
-            "reach": st.column_config.NumberColumn("Reach"),
+            "reach": st.column_config.NumberColumn("Reach", format="accounting"),
             "leads_generated": st.column_config.NumberColumn("Leads (dari Iklan)"),
             "leads_received": st.column_config.NumberColumn("Leads Diterima (CS)"),
             "deals_closed": st.column_config.NumberColumn("Closing"),
