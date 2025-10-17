@@ -161,8 +161,6 @@ def run_etl_pipeline(df_raw, selected_date, selected_time, selected_sesi):
     }
     df_oi_agg = df_order_items.groupby(grouping_keys).agg(agg_rules).reset_index()
 
-    # DENGAN ASUMSI UNIQUE INDEX TELAH DIBUAT DI DATABASE
-    # ON CONFLICT akan mencegah duplikasi jika file yang sama di-upload ulang
     conflict_cols_oi = ["order_id", "product_id", "store_id"]
     insert_and_notify(
         df_oi_agg,

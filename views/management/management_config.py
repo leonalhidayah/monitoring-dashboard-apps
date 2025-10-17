@@ -25,7 +25,7 @@ def get_now_in_jakarta():
 
 MARKETPLACE_LIST = set(get_dim_marketplaces()["nama_marketplace"].tolist())
 STORE_LIST = set(get_dim_stores()["nama_toko"].tolist())
-STORE_LIST_ADV = STORE_LIST | {"SP zhi yang yao (iklan eksternal FB)"}
+# STORE_LIST_ADV = STORE_LIST | {"SP zhi yang yao (iklan eksternal FB)"}
 PLARFORM_REGULAR = set(get_dim_platforms()["nama_platform"].tolist())
 TOPUP_AKUN_REGULAR = set(get_dim_topup_account_regular()["nama_akun"].tolist())
 AKUN_CPAS_LIST = set(get_dim_cpas_accounts()["nama_akun_cpas"].tolist())
@@ -586,7 +586,7 @@ ADVERTISER_TABLE_CONFIGS = {
             ),
             "nama_toko": st.column_config.SelectboxColumn(
                 "Nama Toko",
-                options=STORE_LIST_ADV,
+                options=STORE_LIST,
                 required=True,
             ),
             "spend": st.column_config.NumberColumn(
