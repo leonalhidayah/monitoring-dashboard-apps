@@ -342,240 +342,298 @@ def display_advertiser_dashboard(project_name: str):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def display_budgeting_dashboard(project_id: int, project_name: str):
-    """
-    Menampilkan dashboard finansial lengkap dengan gauge chart dinamis.
-    """
-    st.title(f"📊 Dashboard Finansial: {project_name}")
+# def display_budgeting_dashboard(project_id: int, project_name: str):
+#     """
+#     Menampilkan dashboard finansial lengkap dengan gauge chart dinamis.
+#     """
+#     st.title(f"📊 Dashboard Finansial: {project_name}")
 
-    # --- Filter Periode di ATAS HALAMAN ---
-    st.divider()
-    col_header, col_filter = st.columns([2, 1])
-    with col_header:
-        st.header("Ringkasan Performa Omset")
-    with col_filter:
-        today = date.today()
-        start_default = today.replace(day=1)
-        date_range = st.date_input(
-            "Pilih Periode Analisis:",
-            value=(start_default, today),
-            key=f"date_filter_{project_name}",
-        )
+#     # --- Filter Periode di ATAS HALAMAN ---
+#     st.divider()
+#     col_header, col_filter = st.columns([2, 1])
+#     with col_header:
+#         st.header("Ringkasan Performa Omset")
+#     with col_filter:
+#         today = date.today()
+#         start_default = today.replace(day=1)
+#         date_range = st.date_input(
+#             "Pilih Periode Analisis:",
+#             value=(start_default, today),
+#             key=f"date_filter_{project_name}",
+#         )
 
-    if not (isinstance(date_range, tuple) and len(date_range) == 2):
-        st.warning("Harap pilih rentang tanggal yang valid (mulai dan akhir).")
-        st.stop()
+#     if not (isinstance(date_range, tuple) and len(date_range) == 2):
+#         st.warning("Harap pilih rentang tanggal yang valid (mulai dan akhir).")
+#         st.stop()
 
-    tgl_awal, tgl_akhir = date_range
-    st.caption(
-        f"Periode: {tgl_awal.strftime('%d %B %Y')} s/d {tgl_akhir.strftime('%d %B %Y')}"
-    )
+#     tgl_awal, tgl_akhir = date_range
+#     st.caption(
+#         f"Periode: {tgl_awal.strftime('%d %B %Y')} s/d {tgl_akhir.strftime('%d %B %Y')}"
+#     )
 
-    # --- Bagian 1: Analisis Omset (Tidak Berubah) ---
-    total_target_omset = get_total_sales_target(project_id, tgl_awal, tgl_akhir)
-    df_raw = get_budget_ads_summary_by_project(
-        project_name=project_name,
-        start_date=tgl_awal,
-        end_date=tgl_akhir,
-    )
-    total_omset_aktual = 0
-    if not df_raw.empty:
-        # total_omset_aktual = df_omset_unik["omset_akrual"].sum()
-        total_omset_aktual = df_raw["akrual_basis"].sum()
-    pencapaian_persen = (
-        (float(total_omset_aktual) / float(total_target_omset) * 100)
-        if total_target_omset > 0
-        else 0
-    )
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Omset Aktual (Akrual)", f"Rp {total_omset_aktual:,.0f}", border=True)
-    col2.metric("Target Omset", f"Rp {round(total_target_omset, -1):,.0f}", border=True)
-    col3.metric("Pencapaian Target", f"{pencapaian_persen:.2f} %", border=True)
+#     # --- Bagian 1: Analisis Omset (Tidak Berubah) ---
+#     total_target_omset = get_total_sales_target(project_id, tgl_awal, tgl_akhir)
+#     df_raw = get_budget_ads_summary_by_project(
+#         project_name=project_name,
+#         start_date=tgl_awal,
+#         end_date=tgl_akhir,
+#     )
+#     total_omset_aktual = 0
+#     if not df_raw.empty:
+#         # total_omset_aktual = df_omset_unik["omset_akrual"].sum()
+#         total_omset_aktual = df_raw["akrual_basis"].sum()
+#     pencapaian_persen = (
+#         (float(total_omset_aktual) / float(total_target_omset) * 100)
+#         if total_target_omset > 0
+#         else 0
+#     )
+#     col1, col2, col3 = st.columns(3)
+#     col1.metric("Omset Aktual (Akrual)", f"Rp {total_omset_aktual:,.0f}", border=True)
+#     col2.metric("Target Omset", f"Rp {round(total_target_omset, -1):,.0f}", border=True)
+#     col3.metric("Pencapaian Target", f"{pencapaian_persen:.2f} %", border=True)
 
-    st.divider()
+#     st.divider()
 
-    st.header("Analisis Performa Iklan")
+#     st.header("Analisis Performa Iklan")
 
-    df_ads = get_vw_ads_performance_summary(project_name, tgl_awal, tgl_akhir)
+#     df_ads = get_vw_ads_performance_summary(project_name, tgl_awal, tgl_akhir)
 
-    if df_ads.empty:
-        st.info("Tidak ada data performa iklan yang ditemukan untuk periode ini.")
-    else:
-        # Kalkulasi metrik keseluruhan untuk periode yang dipilih
-        total_spending_ads = df_ads["total_spending"].sum()
-        total_omset_ads = df_ads["total_omset"].sum()
-        rasio_ads_overall = (
-            (total_spending_ads / total_omset_ads * 100) if total_omset_ads > 0 else 0
-        )
+#     if df_ads.empty:
+#         st.info("Tidak ada data performa iklan yang ditemukan untuk periode ini.")
+#     else:
+#         # Kalkulasi metrik keseluruhan untuk periode yang dipilih
+#         total_spending_ads = df_ads["total_spending"].sum()
+#         total_omset_ads = df_ads["total_omset"].sum()
+#         rasio_ads_overall = (
+#             (total_spending_ads / total_omset_ads * 100) if total_omset_ads > 0 else 0
+#         )
 
-        year = tgl_akhir.year
-        quarter = (tgl_akhir.month - 1) // 3 + 1
-        target_rasio = get_target_ads_ratio(project_id, year, quarter)
+#         year = tgl_akhir.year
+#         quarter = (tgl_akhir.month - 1) // 3 + 1
+#         target_rasio = get_target_ads_ratio(project_id, year, quarter)
 
-        if target_rasio is None:
-            st.warning(f"Target rasio untuk Q{quarter} {year} belum diatur.")
-        else:
-            safe_zone_start = target_rasio - 5
+#         if target_rasio is None:
+#             st.warning(f"Target rasio untuk Q{quarter} {year} belum diatur.")
+#         else:
+#             safe_zone_start = target_rasio - 5
 
-            if rasio_ads_overall < safe_zone_start:
-                status_text = "Under"
-                bar_color = "tomato"
-            elif safe_zone_start <= rasio_ads_overall <= target_rasio:
-                status_text = "Normal"
-                bar_color = "green"
-            else:
-                status_text = "Over"
-                bar_color = "tomato"
+#             if rasio_ads_overall < safe_zone_start:
+#                 status_text = "Under"
+#                 bar_color = "tomato"
+#             elif safe_zone_start <= rasio_ads_overall <= target_rasio:
+#                 status_text = "Normal"
+#                 bar_color = "green"
+#             else:
+#                 status_text = "Over"
+#                 bar_color = "tomato"
 
-            df_ads["target_rasio"] = target_rasio
-            conditions = [
-                df_ads["ads_spend_percentage"] < safe_zone_start,
-                (df_ads["ads_spend_percentage"] >= safe_zone_start)
-                & (df_ads["ads_spend_percentage"] <= target_rasio),
-            ]
+#             df_ads["target_rasio"] = target_rasio
+#             conditions = [
+#                 df_ads["ads_spend_percentage"] < safe_zone_start,
+#                 (df_ads["ads_spend_percentage"] >= safe_zone_start)
+#                 & (df_ads["ads_spend_percentage"] <= target_rasio),
+#             ]
 
-            # Definisikan pilihan status sesuai kondisi
-            choices = ["Under", "Normal"]
+#             # Definisikan pilihan status sesuai kondisi
+#             choices = ["Under", "Normal"]
 
-            # Tambahkan kolom 'target_rasio' dan 'status'
-            df_ads["target_rasio"] = target_rasio
-            df_ads["status"] = np.select(conditions, choices, default="Over")
+#             # Tambahkan kolom 'status'
+#             df_ads["status"] = np.select(conditions, choices, default="Over")
 
-            fig = go.Figure(
-                go.Indicator(
-                    mode="gauge+number",
-                    value=rasio_ads_overall,
-                    number={"suffix": "%", "font": {"size": 40}},
-                    title={
-                        "text": f"Target: {target_rasio:.2f}%, Status: {status_text}",
-                        "font": {"size": 20},
-                    },
-                    gauge={
-                        "axis": {"range": [0, target_rasio * 2]},
-                        "bar": {"color": bar_color},
-                        "steps": [
-                            {
-                                "range": [safe_zone_start, target_rasio],
-                                "color": "lightgreen",
-                            },
-                        ],
-                        "threshold": {
-                            "line": {"color": "black", "width": 4},
-                            "value": target_rasio,
-                        },
-                    },
-                )
-            )
-            fig.update_layout(height=250, margin=dict(l=20, r=20, t=60, b=20))
-            st.plotly_chart(fig, use_container_width=True)
+#             fig = go.Figure(
+#                 go.Indicator(
+#                     mode="gauge+number",
+#                     value=rasio_ads_overall,
+#                     number={"suffix": "%", "font": {"size": 40}},
+#                     title={
+#                         "text": f"Target: {target_rasio:.2f}%, Status: {status_text}",
+#                         "font": {"size": 20},
+#                     },
+#                     gauge={
+#                         "axis": {"range": [0, target_rasio * 2]},
+#                         "bar": {"color": bar_color},
+#                         "steps": [
+#                             {
+#                                 "range": [safe_zone_start, target_rasio],
+#                                 "color": "lightgreen",
+#                             },
+#                         ],
+#                         "threshold": {
+#                             "line": {"color": "black", "width": 4},
+#                             "value": target_rasio,
+#                         },
+#                     },
+#                 )
+#             )
+#             fig.update_layout(height=250, margin=dict(l=20, r=20, t=60, b=20))
+#             st.plotly_chart(fig, use_container_width=True)
 
-        st.divider()
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col1:
-            st.metric(
-                label="Total Ad Spend (MP + CPAS + FO)",
-                value=f"Rp {total_spending_ads:,.0f}",
-                border=True,
-            )
-        with col2:
-            st.metric(
-                label="Omset Berjalan (Total Pesanan)",
-                value=f"Rp {total_omset_ads:,.0f}",
-                border=True,
-            )
-        with col3:
-            st.metric(
-                label="Rasio Ads/Omset",
-                value=f"{rasio_ads_overall:.2f} %",
-                border=True,
-            )
+#         st.divider()
+#         col1, col2, col3 = st.columns([1, 1, 1])
+#         with col1:
+#             st.metric(
+#                 label="Total Ad Spend (MP + CPAS)",
+#                 value=f"Rp {total_spending_ads:,.0f}",
+#                 border=True,
+#             )
+#         with col2:
+#             st.metric(
+#                 label="Omset Berjalan (Total Pesanan)",
+#                 value=f"Rp {total_omset_ads:,.0f}",
+#                 border=True,
+#             )
+#         with col3:
+#             st.metric(
+#                 label="Rasio Ads/Omset",
+#                 value=f"{rasio_ads_overall:.2f} %",
+#                 border=True,
+#             )
 
-        st.divider()
+#         st.divider()
 
-        st.subheader("Total Omset Berjalan vs Ads Spend")
+#         st.subheader("Total Omset Berjalan vs Ads Spend")
 
-        try:
-            df_ads["tanggal"] = pd.to_datetime(df_ads["tanggal"]).dt.date
-        except Exception as e:
-            st.error(f"Gagal memproses kolom 'tanggal' di df_ads. Detail: {e}")
-            st.stop()
+#         try:
+#             df_ads["tanggal"] = pd.to_datetime(df_ads["tanggal"]).dt.date
+#         except Exception as e:
+#             st.error(f"Gagal memproses kolom 'tanggal' di df_ads. Detail: {e}")
+#             st.stop()
 
-        # Agregasi data harian
-        df_omset_daily = (
-            df_ads.groupby(["tanggal"])[["total_omset", "total_spending"]]
-            .sum()
-            .reset_index()  # PENTING: Ubah index 'tanggal' menjadi kolom biasa
-            .rename(
-                columns={
-                    "total_omset": "Total Omset Berjalan",
-                    "total_spending": "Total Ads Spending",
-                }
-            )
-        )
+#         # Agregasi data harian
+#         df_omset_daily = (
+#             df_ads.groupby(["tanggal"])[["total_omset", "total_spending"]]
+#             .sum()
+#             .reset_index()  # PENTING: Ubah index 'tanggal' menjadi kolom biasa
+#             .rename(
+#                 columns={
+#                     "total_omset": "Total Omset Berjalan",
+#                     "total_spending": "Total Ads Spending",
+#                 }
+#             )
+#         )
 
-        fig = px.line(
-            df_omset_daily,
-            x="tanggal",
-            y=[
-                "Total Omset Berjalan",
-                "Total Ads Spending",
-            ],
-            markers=True,
-            title="Perkembangan Omset vs Biaya Iklan Harian",
-        )
+#         fig = px.line(
+#             df_omset_daily,
+#             x="tanggal",
+#             y=[
+#                 "Total Omset Berjalan",
+#                 "Total Ads Spending",
+#             ],
+#             markers=True,
+#             title="Perkembangan Omset vs Biaya Iklan Harian",
+#         )
 
-        # Kustomisasi format tooltip dan sumbu
-        fig.update_traces(
-            # %{y} secara otomatis mengambil nilai dari line yang di-hover
-            hovertemplate="<b>Date:</b> %{x|%d %B %Y}<br><b>Amount:</b> Rp %{y:,.0f}<extra></extra>"
-        )
+#         # Kustomisasi format tooltip dan sumbu
+#         fig.update_traces(
+#             # %{y} secara otomatis mengambil nilai dari line yang di-hover
+#             hovertemplate="<b>Date:</b> %{x|%d %B %Y}<br><b>Amount:</b> Rp %{y:,.0f}<extra></extra>"
+#         )
 
-        fig.update_layout(
-            xaxis_title="Tanggal",
-            yaxis_title="Jumlah (Rp)",
-            yaxis_tickformat=".2s",
-            legend_title_text="",
-            legend=dict(
-                orientation="h",  # 'h' untuk horizontal
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-            ),
-        )
+#         fig.update_layout(
+#             xaxis_title="Tanggal",
+#             yaxis_title="Jumlah (Rp)",
+#             yaxis_tickformat=".2s",
+#             legend_title_text="",
+#             legend=dict(
+#                 orientation="h",  # 'h' untuk horizontal
+#                 yanchor="bottom",
+#                 y=1.02,
+#                 xanchor="center",
+#                 x=0.5,
+#             ),
+#         )
 
-        # Menampilkan chart di Streamlit
-        st.plotly_chart(fig, use_container_width=True)
+#         # Menampilkan chart di Streamlit
+#         st.plotly_chart(fig, use_container_width=True)
 
-        st.divider()
+#         st.divider()
 
-        def highlight_status(val):
-            color = "lightgreen" if val == "Normal" else "tomato"
-            return f"background-color: {color}; color: black; font-weight: bold; text-align: center;"
+#         def highlight_status(val):
+#             color = "lightgreen" if val == "Normal" else "tomato"
+#             return f"background-color: {color}; color: black; font-weight: bold; text-align: center;"
 
-        # Terapkan styling ke DataFrame
-        styled_df = (
-            df_ads.style.format(
-                {
-                    "total_omset": format_rupiah,
-                    "total_spending": format_rupiah,
-                    "ads_spend_percentage": "{:.2f}%",
-                    "target_rasio": "{:.2f}%",
-                }
-            )
-            .applymap(highlight_status, subset=["status"])
-            .set_properties(
-                **{
-                    "text-align": "center",
-                    "border": "1px solid #ccc",
-                    "border-radius": "4px",
-                    "padding": "6px",
-                }
-            )
-        )
+#         # Terapkan styling ke DataFrame
+#         styled_df = (
+#             df_ads.style.format(
+#                 {
+#                     "total_omset": format_rupiah,
+#                     "total_spending": format_rupiah,
+#                     "ads_spend_percentage": "{:.2f}%",
+#                     "target_rasio": "{:.2f}%",
+#                 }
+#             )
+#             .applymap(highlight_status, subset=["status"])
+#             .set_properties(
+#                 **{
+#                     "text-align": "center",
+#                     "border": "1px solid #ccc",
+#                     "border-radius": "4px",
+#                     "padding": "6px",
+#                 }
+#             )
+#         )
 
-        st.subheader("Detail Performa Iklan per Toko")
-        st.dataframe(styled_df, width="stretch")
+#         st.subheader("Detail Performa Iklan per Toko")
+
+#         df_ads_by_store = (
+#             df_ads.groupby(["nama_toko"])
+#             .agg({"total_omset": "sum", "total_spending": "sum"})
+#             .reset_index()
+#         )
+
+#         df_ads_by_store["ads_spend_percentage"] = (
+#             df_ads_by_store["total_spending"] / df_ads_by_store["total_omset"]
+#         ) * 100
+
+#         safe_zone_start = target_rasio - 5
+
+#         if rasio_ads_overall < safe_zone_start:
+#             status_text = "Under"
+#             bar_color = "tomato"
+#         elif safe_zone_start <= rasio_ads_overall <= target_rasio:
+#             status_text = "Normal"
+#             bar_color = "green"
+#         else:
+#             status_text = "Over"
+#             bar_color = "tomato"
+
+#         df_ads_by_store["target_rasio"] = target_rasio
+#         conditions = [
+#             df_ads_by_store["ads_spend_percentage"] < safe_zone_start,
+#             (df_ads_by_store["ads_spend_percentage"] >= safe_zone_start)
+#             & (df_ads_by_store["ads_spend_percentage"] <= target_rasio),
+#         ]
+
+#         # Definisikan pilihan status sesuai kondisi
+#         choices = ["Under", "Normal"]
+
+#         # Tambahkan kolom 'status'
+#         df_ads_by_store["status"] = np.select(conditions, choices, default="Over")
+
+#         styled_df_by_store = (
+#             df_ads_by_store.style.format(
+#                 {
+#                     "total_omset": format_rupiah,
+#                     "total_spending": format_rupiah,
+#                     "ads_spend_percentage": "{:.2f}%",
+#                     "target_rasio": "{:.2f}%",
+#                 }
+#             )
+#             .applymap(highlight_status, subset=["status"])
+#             .set_properties(
+#                 **{
+#                     "text-align": "center",
+#                     "border": "1px solid #ccc",
+#                     "border-radius": "4px",
+#                     "padding": "6px",
+#                 }
+#             )
+#         )
+
+#         st.dataframe(styled_df_by_store)
+
+#         with st.expander("Detail Performnace Ikllan Toko per Tanggal"):
+#             st.dataframe(styled_df, width="stretch")
 
 
 def display_admin_dashboard(project_name: str):
@@ -1258,9 +1316,9 @@ def display_budgeting_regular_dashboard(project_id: int, project_name: str):
 
             df_ads["target_rasio"] = target_rasio
             conditions = [
-                df_ads["ads_spend_percentage"] < safe_zone_start,
-                (df_ads["ads_spend_percentage"] >= safe_zone_start)
-                & (df_ads["ads_spend_percentage"] <= target_rasio),
+                df_ads["ads_spend_percentage_net"] < safe_zone_start,
+                (df_ads["ads_spend_percentage_net"] >= safe_zone_start)
+                & (df_ads["ads_spend_percentage_net"] <= target_rasio),
             ]
 
             # Definisikan pilihan status sesuai kondisi
@@ -1352,3 +1410,277 @@ def display_budgeting_regular_dashboard(project_id: int, project_name: str):
             ),
             width="stretch",
         )
+
+
+def highlight_status(val):
+    """Memberi warna pada sel status berdasarkan nilainya."""
+    color = "lightgreen" if val == "Normal" else "tomato"
+    return f"background-color: {color}; color: black; font-weight: bold; text-align: center;"
+
+
+def calculate_ads_status(df, target_rasio, safe_zone_start):
+    """
+    Menambahkan kolom 'status' ke DataFrame berdasarkan target rasio.
+    Menggunakan kolom 'ads_spend_percentage' yang sudah ada di df.
+    """
+    conditions = [
+        df["ads_spend_percentage"] < safe_zone_start,  # Under
+        (df["ads_spend_percentage"] >= safe_zone_start)
+        & (df["ads_spend_percentage"] <= target_rasio),  # Normal
+    ]
+    choices = ["Under", "Normal"]
+    df["status"] = np.select(conditions, choices, default="Over")
+    df["target_rasio"] = target_rasio
+    return df
+
+
+def style_ads_dataframe(df):
+    """
+    Menerapkan styling standar ke DataFrame performa iklan.
+    Memastikan 'status' adalah kolom terakhir.
+    """
+
+    cols = list(df.columns)
+
+    if "status" in cols:
+        cols.remove("status")
+        cols.append("status")
+
+    return (
+        df[cols]
+        .style.format(
+            {
+                "total_omset": format_rupiah,
+                "total_spending": format_rupiah,
+                "ads_spend_percentage": "{:.2f}%",
+                "target_rasio": "{:.2f}%",
+            }
+        )
+        .applymap(highlight_status, subset=["status"])
+        .set_properties(
+            **{
+                "text-align": "center",
+                "border": "1px solid #ccc",
+                "padding": "6px",
+            }
+        )
+    )
+
+
+# --- FUNGSI MODULAR (PECAHAN DARI FUNGSI UTAMA) ---
+
+
+def display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir):
+    """Menampilkan bagian ringkasan performa omset."""
+    st.header("Ringkasan Performa Omset")
+
+    # Ambil data (akan menggunakan cache jika filter sama)
+    total_target_omset = get_total_sales_target(project_id, tgl_awal, tgl_akhir)
+    df_raw = get_budget_ads_summary_by_project(
+        project_name=project_name,
+        start_date=tgl_awal,
+        end_date=tgl_akhir,
+    )
+
+    total_omset_aktual = 0
+    if not df_raw.empty:
+        total_omset_aktual = df_raw["akrual_basis"].sum()
+
+    pencapaian_persen = (
+        (float(total_omset_aktual) / float(total_target_omset) * 100)
+        if total_target_omset > 0
+        else 0
+    )
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Omset Aktual (Akrual)", format_rupiah(total_omset_aktual), border=True)
+    col2.metric(
+        "Target Omset", format_rupiah(round(total_target_omset, -1)), border=True
+    )
+    col3.metric("Pencapaian Target", f"{pencapaian_persen:.2f} %", border=True)
+
+
+def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
+    """Menampilkan seluruh bagian analisis performa iklan."""
+    st.header("Analisis Performa Iklan")
+
+    # Ambil data Iklan
+    df_ads = get_vw_ads_performance_summary(project_name, tgl_awal, tgl_akhir)
+    if df_ads.empty:
+        st.info("Tidak ada data performa iklan yang ditemukan untuk periode ini.")
+        return  # Keluar dari fungsi jika tidak ada data
+
+    # Ambil Target Rasio
+    year = tgl_akhir.year
+    quarter = (tgl_akhir.month - 1) // 3 + 1
+    target_rasio = get_target_ads_ratio(project_id, year, quarter)
+
+    # --- PERBAIKAN BUG ---
+    # Cek jika target_rasio tidak ada, hentikan eksekusi bagian ini
+    if target_rasio is None or target_rasio == 0:
+        st.warning(
+            f"Target rasio untuk Q{quarter} {year} belum diatur. Analisis iklan tidak dapat dilanjutkan."
+        )
+        return  # Keluar dari fungsi
+
+    # Kalkulasi metrik keseluruhan
+    total_spending_ads = df_ads["total_spending"].sum()
+    total_omset_ads = df_ads["total_omset"].sum()
+    rasio_ads_overall = (
+        (total_spending_ads / total_omset_ads * 100) if total_omset_ads > 0 else 0
+    )
+
+    # Tentukan zona aman dan status (logika ini hanya perlu sekali)
+    safe_zone_start = target_rasio - 5  # Asumsi 5% adalah buffer
+
+    if rasio_ads_overall < safe_zone_start:
+        status_text = "Under"
+        bar_color = "tomato"
+    elif safe_zone_start <= rasio_ads_overall <= target_rasio:
+        status_text = "Normal"
+        bar_color = "green"
+    else:
+        status_text = "Over"
+        bar_color = "tomato"
+
+    # --- 1. Gauge Chart ---
+    fig_gauge = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=rasio_ads_overall,
+            number={"suffix": "%", "font": {"size": 40}},
+            title={
+                "text": f"Target: {target_rasio:.2f}%, Status: {status_text}",
+                "font": {"size": 20},
+            },
+            gauge={
+                "axis": {"range": [0, target_rasio * 2]},
+                "bar": {"color": bar_color},
+                "steps": [
+                    {"range": [safe_zone_start, target_rasio], "color": "lightgreen"},
+                ],
+                "threshold": {
+                    "line": {"color": "black", "width": 4},
+                    "value": target_rasio,
+                },
+            },
+        )
+    )
+    fig_gauge.update_layout(height=250, margin=dict(l=20, r=20, t=60, b=20))
+    st.plotly_chart(fig_gauge, use_container_width=True)
+
+    st.divider()
+
+    # --- 2. Metrik Iklan ---
+    col1, col2, col3 = st.columns([1, 1, 1])
+    col1.metric("Total Ad Spend", format_rupiah(total_spending_ads), border=True)
+    col2.metric(
+        "Omset Berjalan (dari Iklan)", format_rupiah(total_omset_ads), border=True
+    )
+    col3.metric("Rasio Ads/Omset", f"{rasio_ads_overall:.2f} %", border=True)
+
+    st.divider()
+
+    # --- 3. Line Chart Harian ---
+    st.subheader("Total Omset Berjalan vs Ads Spend Harian")
+    try:
+        df_ads["tanggal"] = pd.to_datetime(df_ads["tanggal"]).dt.date
+    except Exception as e:
+        st.error(f"Gagal memproses kolom 'tanggal' di df_ads. Detail: {e}")
+        st.stop()
+
+    df_omset_daily = (
+        df_ads.groupby("tanggal")[["total_omset", "total_spending"]]
+        .sum()
+        .reset_index()
+        .rename(columns={"total_omset": "Total Omset", "total_spending": "Total Ads"})
+    )
+
+    fig_line = px.line(
+        df_omset_daily,
+        x="tanggal",
+        y=["Total Omset", "Total Ads"],
+        markers=True,
+    )
+    fig_line.update_traces(
+        hovertemplate="<b>%{x|%d %B %Y}</b><br><b>Amount:</b> Rp %{y:,.0f}<extra></extra>"
+    )
+    fig_line.update_layout(
+        xaxis_title="Tanggal",
+        yaxis_title="Jumlah (Rp)",
+        yaxis_tickformat=".2s",
+        legend_title_text="",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+    )
+    st.plotly_chart(fig_line, use_container_width=True)
+
+    st.divider()
+
+    # --- 4. Tabel Detail per Toko ---
+    st.subheader("Detail Performa Iklan per Toko")
+
+    df_ads_by_store = (
+        df_ads.groupby("nama_toko")
+        .agg({"total_omset": "sum", "total_spending": "sum"})
+        .reset_index()
+    )
+    df_ads_by_store["ads_spend_percentage"] = (
+        (df_ads_by_store["total_spending"] / df_ads_by_store["total_omset"]) * 100
+    ).fillna(0)
+
+    # Gunakan fungsi helper refactoring
+    df_ads_by_store = calculate_ads_status(
+        df_ads_by_store, target_rasio, safe_zone_start
+    )
+    styled_df_by_store = style_ads_dataframe(df_ads_by_store)
+    st.dataframe(styled_df_by_store, width="stretch")
+
+    # --- 5. Tabel Detail Harian (dalam Expander) ---
+    with st.expander("Detail Performa Iklan Toko per Tanggal"):
+        # Gunakan fungsi helper refactoring
+        df_ads_detailed = calculate_ads_status(df_ads, target_rasio, safe_zone_start)
+        styled_df_detailed = style_ads_dataframe(df_ads_detailed)
+        st.dataframe(styled_df_detailed, width="stretch")
+
+
+# --- FUNGSI UTAMA (SEKARANG JAUH LEBIH RAPI) ---
+
+
+def display_budgeting_dashboard(project_id: int, project_name: str):
+    """
+    Menampilkan dashboard finansial lengkap dengan gauge chart dinamis.
+    (Versi modular dan optimal)
+    """
+    st.title(f"📊 Dashboard Finansial: {project_name}")
+
+    # --- Filter Periode di ATAS HALAMAN ---
+    st.divider()
+    col_header, col_filter = st.columns([2, 1])
+    with col_header:
+        # Pindahkan header Omset ke dalam fungsinya sendiri
+        pass
+    with col_filter:
+        today = date.today()
+        start_default = today.replace(day=1)
+        date_range = st.date_input(
+            "Pilih Periode Analisis:",
+            value=(start_default, today),
+            key=f"date_filter_{project_name}",
+        )
+
+    if not (isinstance(date_range, tuple) and len(date_range) == 2):
+        st.warning("Harap pilih rentang tanggal yang valid (mulai dan akhir).")
+        st.stop()
+
+    tgl_awal, tgl_akhir = date_range
+    st.caption(
+        f"Periode: {tgl_awal.strftime('%d %B %Y')} s/d {tgl_akhir.strftime('%d %B %Y')}"
+    )
+
+    # --- Bagian 1: Analisis Omset (Modular) ---
+    display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir)
+
+    st.divider()
+
+    # --- Bagian 2: Analisis Iklan (Modular) ---
+    display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir)

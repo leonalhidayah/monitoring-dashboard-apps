@@ -307,7 +307,7 @@ def build_navigation_for_role(role, project_names=[]):
 # 4. FUNGSI DATABASE & AUTENTIKASI
 # (Tidak ada perubahan di bagian ini)
 # ==============================================================================
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=3600)
 def fetch_users_for_auth():
     """Mengambil data pengguna untuk streamlit-authenticator."""
     try:
@@ -334,7 +334,7 @@ def fetch_users_for_auth():
             conn.close()
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=3600)
 def get_user_details(username):
     """Mengambil role dan daftar proyek yang diakses oleh pengguna."""
     try:

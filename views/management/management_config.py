@@ -100,7 +100,8 @@ FINANCE_TABLE_CONFIGS = {
             "tanggal",
             "marketplace",
             "nama_toko",
-            "akrual_basis",
+            "pendapatan_kotor",
+            "biaya_admin",
             "cash_basis",
             "bukti",
             "akun_bank",
@@ -122,8 +123,14 @@ FINANCE_TABLE_CONFIGS = {
                 options=STORE_LIST,
                 required=True,
             ),
-            "akrual_basis": st.column_config.NumberColumn(
-                "Akrual Basis (Rp)",
+            "pendapatan_kotor": st.column_config.NumberColumn(
+                "Pendapatan Kotor (Rp)",
+                min_value=0,
+                format="accounting",
+                required=True,
+            ),
+            "biaya_admin": st.column_config.NumberColumn(
+                "Biaya Admin (Rp)",
                 min_value=0,
                 format="accounting",
                 required=True,

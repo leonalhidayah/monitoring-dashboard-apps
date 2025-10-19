@@ -141,6 +141,8 @@ if selected_project:
     st.markdown("  ")
 
     if df is not None and not df.empty:
+        total_pendapatan_kotor = df["pendapatan_kotor"].sum()
+        total_biaya_admin = df["biaya_admin"].sum()
         total_akrual = df["akrual_basis"].sum()
         total_cash = df["cash_basis"].sum()
         total_topup = df["aktual_topup"].sum()
@@ -148,12 +150,19 @@ if selected_project:
         estimasi_profit = total_akrual - total_cashout
 
         kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
-        kpi_col1.metric("Total Akrual Basis", f"Rp {total_akrual:,.0f}", border=True)
-        kpi_col2.metric("Total Cash Basis", f"Rp {total_cash:,.0f}", border=True)
-        kpi_col3.metric("Total Cashout", f"Rp {total_cashout:,.0f}", border=True)
-        kpi_col4.metric("Total Aktual Topup", f"Rp {total_topup:,.0f}", border=True)
+        kpi_col1.metric(
+            "Total Pendapatan Kotor", f"Rp {total_pendapatan_kotor:,.0f}", border=True
+        )
+        kpi_col2.metric(
+            "Total Biaya Admin", f"Rp {total_biaya_admin:,.0f}", border=True
+        )
+        kpi_col3.metric("Total Akrual Basis", f"Rp {total_akrual:,.0f}", border=True)
+        kpi_col4.metric("Total Cash Basis", f"Rp {total_cash:,.0f}", border=True)
+        # kpi_col4.metric("Total Aktual Topup", f"Rp {total_topup:,.0f}", border=True)
 
-        st.metric("Estimasi Profit", f"Rp {estimasi_profit:,.0f}", border=True)
+        kpi_col5, kpi_col6 = st.columns(2)
+        kpi_col5.metric("Total Cashout", f"Rp {total_cashout:,.0f}", border=True)
+        kpi_col6.metric("Estimasi Profit", f"Rp {estimasi_profit:,.0f}", border=True)
 
         st.divider()
 
@@ -312,7 +321,51 @@ if selected_project:
             color = "tomato" if val == "Over" else "lightgreen"
             return f"background-color: {color}; color: black; font-weight: bold; text-align: center;"
 
-        # Terapkan styling ke DataFrame
+        df_by_store = (
+            df.groupby(["nama_toko"])
+            .agg(
+                {
+                    "budget_ads": "sum",
+                    "aktual_topup": "sum",
+                }
+            )
+            .reset_index()
+        )
+
+        df_by_store["status"] = np.where(
+            df_by_store["aktual_topup"] > df_by_store["budget_ads"], "Over", "Normal"
+        )
+
+        styled_df_by_store = (
+            df_by_store[["nama_toko", "budget_ads", "aktual_topup", "status"]]
+            .style.format(
+                {
+                    "budget_ads": format_rupiah,
+                    "aktual_topup": format_rupiah,
+                }
+            )
+            .applymap(highlight_status, subset=["status"])
+            .set_properties(
+                **{
+                    "text-align": "center",
+                    "border": "1px solid #ccc",
+                    "border-radius": "4px",
+                    "padding": "6px",
+                }
+            )
+        )
+
+        st.dataframe(
+            styled_df_by_store,
+            column_config={
+                "nama_toko": "Nama Toko",
+                "budget_ads": "Budget Ads",
+                "aktual_topup": "Aktual Topup",
+                "status": "Status",
+            },
+        )
+
+        # Terapkan styling ke DataFrame detail
         styled_df = (
             df[["tanggal", "nama_toko", "budget_ads", "aktual_topup", "status"]]
             .style.format(
@@ -332,7 +385,10 @@ if selected_project:
             )
         )
 
-        st.dataframe(styled_df, width="stretch")
+        detail_styled_df = st.expander(label="Data Rinci per Tanggal")
+
+        with detail_styled_df:
+            st.dataframe(styled_df, width="stretch")
 
     else:
         st.warning("Tidak ada data yang ditemukan untuk filter yang dipilih.")

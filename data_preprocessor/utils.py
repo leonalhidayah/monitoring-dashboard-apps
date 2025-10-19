@@ -277,7 +277,9 @@ def initialize_omset_data_session(project_name, marketplace_list, store_list):
             ),
             "Marketplace": marketplace_list,
             "Nama Toko": store_list,
-            "Akrual Basis": [0.0] * len(store_list),
+            # "Akrual Basis": [0.0] * len(store_list),
+            "Pendapatan Kotor": [0.0] * len(store_list),
+            "Biaya Admin": [0.0] * len(store_list),
             "Cash Basis": [0.0] * len(store_list),
             "Bukti": [None] * len(store_list),
             "Akun Bank": [None] * len(store_list),
@@ -307,8 +309,20 @@ def get_omset_column_config(store_list):
             options=store_list,
             required=True,
         ),
-        "Akrual Basis": st.column_config.NumberColumn(
-            "Akrual Basis (Rp)",
+        # "Akrual Basis": st.column_config.NumberColumn(
+        #     "Akrual Basis (Rp)",
+        #     min_value=0.0,
+        #     format="accounting",
+        #     required=True,
+        # ),
+        "Pendapatan Kotor": st.column_config.NumberColumn(
+            "Pendapatan Kotor (Rp)",
+            min_value=0.0,
+            format="accounting",
+            required=True,
+        ),
+        "Biaya Admin": st.column_config.NumberColumn(
+            "Biaya Admin (Rp)",
             min_value=0.0,
             format="accounting",
             required=True,

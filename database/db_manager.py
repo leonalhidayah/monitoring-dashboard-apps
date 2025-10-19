@@ -168,13 +168,20 @@ def get_finance_budget_plan_by_project(
     conn = None
     # Query ini mengambil semua kolom yang dibutuhkan untuk transformasi
     query = """
-        SELECT fbp.*, dp.project_name 
-        FROM finance_budget_plan fbp
-        INNER JOIN dim_projects dp ON dp.project_id = fbp.project_id
+        SELECT 
+            fbp.*, 
+            dp.project_name 
+        FROM 
+            finance_budget_plan fbp
+        INNER JOIN 
+            dim_projects dp ON dp.project_id = fbp.project_id
         WHERE
             dp.project_name = %(project_name)s
+            -- PERBAIKAN DI SINI:
+            -- Kita membandingkan tanggal 1 dari database dengan tanggal 1 dari filter.
             AND TO_DATE(fbp.bulan || ' ' || fbp.tahun, 'FMMonth YYYY') 
-                BETWEEN %(start_date)s AND %(end_date)s
+                BETWEEN DATE_TRUNC('month', %(start_date)s::date) 
+                    AND DATE_TRUNC('month', %(end_date)s::date)
         ORDER BY
             fbp.tahun, 
             TO_DATE(fbp.bulan, 'FMMonth');
@@ -229,6 +236,7 @@ def get_vw_admin_shipments_delivery():
     return get_table_data(table_name="vw_admin_shipments_delivery")
 
 
+@st.cache_data
 def get_target_ads_ratio(project_id: int, year: int, quarter: int) -> float | None:
     """
     Mengambil target rasio ads/omset dari budget plan untuk kuartal tertentu.
@@ -289,11 +297,12 @@ def get_finance_budget_non_ads():
     return get_table_data(table_name="finance_budget_non_ads")
 
 
-def get_vw_budget_ads_monitoring():
-    """Mengambil semua data dari tabel vw_budget_ads_monitoring."""
-    return get_table_data(table_name="vw_budget_ads_monitoring")
+# def get_vw_budget_ads_monitoring():
+#     """Mengambil semua data dari tabel vw_budget_ads_monitoring."""
+#     return get_table_data(table_name="vw_budget_ads_monitoring")
 
 
+@st.cache_data
 def get_vw_ads_performance_summary(
     project_name: str, start_date: date, end_date: date
 ) -> pd.DataFrame:
@@ -357,11 +366,13 @@ def get_dim_expense_categories():
     return get_table_data(table_name="dim_expense_categories ")
 
 
+@st.cache_data
 def get_map_project_stores():
     """Mengambil semua data dari tabel map_project_stores ."""
     return get_table_data(table_name="map_project_stores ")
 
 
+@st.cache_data
 def get_total_sales_target(project_id: int, start_date: str, end_date: str):
     """
     Menghitung total TARGET OMSET untuk sebuah project dalam rentang tanggal.
@@ -418,7 +429,8 @@ def get_vw_monitoring_cashflow(
         WHERE
             project_name = %(project_name)s
             AND TO_DATE(report_month_name || ' ' || report_year, 'FMMonth YYYY') 
-                BETWEEN %(start_date)s AND %(end_date)s
+                BETWEEN DATE_TRUNC('month', %(start_date)s::date) 
+                    AND DATE_TRUNC('month', %(end_date)s::date)
         ORDER BY
             report_year, 
             TO_DATE(report_month_name, 'FMMonth');
@@ -459,15 +471,17 @@ def get_marketing_ads_ratio(project_name, start_date, end_date):
             fbp.bulan,
             fbp.parameter_name,
             fbp.target_rasio_persen
-        FROM finance_budget_plan fbp
-        JOIN dim_projects dp ON fbp.project_id = dp.project_id
+        FROM 
+            finance_budget_plan fbp
+        JOIN 
+            dim_projects dp ON fbp.project_id = dp.project_id
         WHERE 
             dp.project_name = %(project_name)s
             AND fbp.parameter_name = 'Biaya Marketing (Ads)'
-            AND (
-                TO_DATE(fbp.bulan || ' ' || fbp.tahun, 'Month YYYY')
-                BETWEEN %(start_date)s AND %(end_date)s
-            )
+            -- PERUBAIKAN: Logika perbandingan diubah untuk membandingkan bulan, bukan hari.
+            AND TO_DATE(fbp.bulan || ' ' || fbp.tahun, 'Month YYYY') 
+                BETWEEN DATE_TRUNC('month', %(start_date)s::date) 
+                    AND DATE_TRUNC('month', %(end_date)s::date)
     """
     conn = get_connection()
     df = pd.read_sql(
@@ -1214,16 +1228,18 @@ def insert_omset_data(data: pd.DataFrame):
         query = """
             INSERT INTO finance_omset (
                 tanggal, marketplace, nama_toko, akrual_basis,
-                cash_basis, bukti, akun_bank 
+                cash_basis, bukti, akun_bank, pendapatan_kotor, biaya_admin 
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             ON CONFLICT (tanggal, nama_toko) DO UPDATE SET
                 marketplace = EXCLUDED.marketplace,
                 akrual_basis = EXCLUDED.akrual_basis,
                 cash_basis = EXCLUDED.cash_basis,
                 bukti = EXCLUDED.bukti,
-                akun_bank = EXCLUDED.akun_bank;
+                akun_bank = EXCLUDED.akun_bank,
+                pendapatan_kotor = EXCLUDED.pendapatan_kotor,
+                biaya_admin = EXCLUDED.biaya_admin;
         """
 
         records = [
@@ -1237,6 +1253,8 @@ def insert_omset_data(data: pd.DataFrame):
                     "Cash Basis",
                     "Bukti",
                     "Akun Bank",
+                    "Pendapatan Kotor",
+                    "Biaya Admin",
                 ]
             ].to_numpy()
         ]
@@ -1797,6 +1815,7 @@ def update_table(table_name, data_list, pk_cols):
     conn.close()
 
 
+@st.cache_data
 def get_budget_ads_summary_by_project(project_name, start_date=None, end_date=None):
     """
     Mengambil data summary budget ads dari view vw_budget_ads_summary.
@@ -1976,7 +1995,7 @@ def get_vw_ragular_performance_summary(
     start_date: date, end_date: date
 ) -> pd.DataFrame:
     """
-    Mengambil data dari view vw_regular_performance_net berdasarkan filter tanggal.
+    Mengambil data dari view vw_regular_performance_summary berdasarkan filter tanggal.
 
     Args:
         start_date (date): Tanggal mulai periode.
@@ -1991,7 +2010,7 @@ def get_vw_ragular_performance_summary(
         SELECT
             *
         FROM
-            vw_regular_performance_net
+            vw_regular_performance_summary
         WHERE
             tanggal BETWEEN %(start_date)s AND %(end_date)s
         ORDER BY
@@ -2010,12 +2029,12 @@ def get_vw_ragular_performance_summary(
             },
         )
         logging.info(
-            f"Successfully fetched {len(df)} rows from vw_regular_performance_net."
+            f"Successfully fetched {len(df)} rows from vw_regular_performance_summary."
         )
         return df
     except (Exception, psycopg2.DatabaseError) as e:
         # Log error yang lebih spesifik
-        logging.error(f"Failed to fetch data from vw_regular_performance_net: {e}")
+        logging.error(f"Failed to fetch data from vw_regular_performance_summary: {e}")
         return pd.DataFrame()  # Kembalikan dataframe kosong jika error
     finally:
         if conn:
