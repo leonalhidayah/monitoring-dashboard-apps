@@ -103,12 +103,7 @@ with admin_marketplace_tab:
                 df_final.replace({pd.NaT: None}, inplace=True)
 
                 def insert_and_notify(
-                    df,
-                    table_name,
-                    columns,
-                    conflict_cols,
-                    update_cols=None,
-                    drop_duplicates_row=True,
+                    df, table_name, columns, conflict_cols, update_cols=None
                 ):
                     """
                     Fungsi untuk memasukkan data ke tabel dan memberikan notifikasi di UI Streamlit.
@@ -120,14 +115,12 @@ with admin_marketplace_tab:
                         table_name (str): Nama tabel tujuan.
                         columns (list): Daftar kolom yang akan dimasukkan.
                         conflict_cols (list): Daftar kolom untuk penanganan konflik (ON CONFLICT).
-                        update_cols (list, optional): Daftar kolom yang akan di-update jika terjadi konflik. Defaults to None.
-                        drop_duplicates_row (bool, optional): Opsi untuk menghapus duplikat baris. Defaults to True.
                     """
                     result = db_manager.insert_orders_to_normalized_table(
                         df,
                         table_name,
                         columns,
-                        drop_duplicates_row=drop_duplicates_row,
+                        drop_duplicates_row=True,
                         dropna=True,
                         conflict_cols=conflict_cols,
                         update_cols=update_cols,
@@ -139,6 +132,9 @@ with admin_marketplace_tab:
                         st.error(
                             f"Gagal menyimpan data ke '{table_name}': {result['message']}"
                         )
+
+                    # Mengembalikan status untuk penanganan lebih lanjut jika diperlukan
+                    # return result["status"] == "success"
 
                 # PROSES DIMENSI SEDERHANA (tanpa join/mapping)
                 dimension_tables = {
@@ -345,38 +341,16 @@ with admin_marketplace_tab:
 
                 df_order_items_final = df_mapped[final_columns]
 
-                # oi_conflict_cols = ["order_id", "product_id", "store_id"]
-
-                oi_agg = {
-                    "jumlah": "sum",
-                    "harga_satuan": "mean",
-                    "subtotal_produk": "sum",
-                    "diskon_penjual": "sum",
-                    "voucher": "sum",
-                    "voucher_toko": "sum",
-                }
-
-                df_oi_agg = (
-                    df_order_items_final.groupby(
-                        [
-                            "order_id",
-                            "product_id",
-                            "store_id",
-                        ]
-                    )
-                    .agg(oi_agg)
-                    .reset_index()
-                )
+                oi_conflict_cols = ["order_id", "product_id", "store_id"]
 
                 insert_and_notify(
-                    df_oi_agg,
+                    df_order_items_final,
                     "order_items",
                     columns=final_columns,
-                    conflict_cols=None,
-                    drop_duplicates_row=False,
+                    conflict_cols=oi_conflict_cols,
                 )
 
-                # PROSES SHIPMENTS
+                # TODO: PROSES SHIPMENTS
                 st.info("Memproses tabel shipments...")
                 df_shipping_map = db_manager.get_dim_shipping_services()
 
