@@ -1361,13 +1361,13 @@ def display_budgeting_regular_dashboard(project_id: int, project_name: str):
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             st.metric(
-                label="Total Ad Spend (MP + CPAS + FO)",
+                label="Total Ad Spend Regular",
                 value=f"Rp {total_spending_ads:,.0f}",
                 border=True,
             )
         with col2:
             st.metric(
-                label="Omset Berjalan (Total Pesanan)",
+                label="Omset Berjalan (Gross Revenue)",
                 value=f"Rp {total_omset_ads:,.0f}",
                 border=True,
             )
@@ -1398,14 +1398,22 @@ def display_budgeting_regular_dashboard(project_id: int, project_name: str):
         st.divider()
 
         # Tampilkan tabel detail performa iklan
-        st.subheader("Detail Performa Iklan per Toko")
+        st.subheader("Detail Performa Iklan Regular")
         st.dataframe(
             df_ads.style.format(
                 {
                     "total_omset": "Rp {:,.0f}",
                     "total_spending": "Rp {:,.0f}",
-                    "ads_spend_percentage": "{:.2f}%",
+                    "ads_spend_percentage_net": "{:.2f}%",
                     "target_rasio": "{:.2f}%",
+                }
+            )
+            .applymap(highlight_status, subset=["status"])
+            .set_properties(
+                **{
+                    "text-align": "center",
+                    "border": "1px solid #ccc",
+                    "padding": "6px",
                 }
             ),
             width="stretch",
