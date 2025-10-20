@@ -236,7 +236,6 @@ def get_vw_admin_shipments_delivery():
     return get_table_data(table_name="vw_admin_shipments_delivery")
 
 
-@st.cache_data
 def get_target_ads_ratio(project_id: int, year: int, quarter: int) -> float | None:
     """
     Mengambil target rasio ads/omset dari budget plan untuk kuartal tertentu.
@@ -302,7 +301,6 @@ def get_finance_budget_non_ads():
 #     return get_table_data(table_name="vw_budget_ads_monitoring")
 
 
-@st.cache_data
 def get_vw_ads_performance_summary(
     project_name: str, start_date: date, end_date: date
 ) -> pd.DataFrame:
@@ -366,13 +364,11 @@ def get_dim_expense_categories():
     return get_table_data(table_name="dim_expense_categories ")
 
 
-@st.cache_data
 def get_map_project_stores():
     """Mengambil semua data dari tabel map_project_stores ."""
     return get_table_data(table_name="map_project_stores ")
 
 
-@st.cache_data
 def get_total_sales_target(project_id: int, start_date: str, end_date: str):
     """
     Menghitung total TARGET OMSET untuk sebuah project dalam rentang tanggal.
@@ -1815,7 +1811,6 @@ def update_table(table_name, data_list, pk_cols):
     conn.close()
 
 
-@st.cache_data
 def get_budget_ads_summary_by_project(project_name, start_date=None, end_date=None):
     """
     Mengambil data summary budget ads dari view vw_budget_ads_summary.
