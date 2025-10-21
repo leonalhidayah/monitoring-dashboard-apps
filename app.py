@@ -288,9 +288,39 @@ def build_navigation_for_role(role, project_names=[]):
         for name, pages in PROJECT_PAGE_MAP.items()
     }
 
+    # if role == "total_project_manager":
+    #     pages["Admin"] = list(admin_pages.values())
+    #     pages["Project Regular"] = list(regular_pages.values())
+    #     pages.update(all_project_pages)
+    #     return pages
+
+    if role == "total_project_manager_sadewa":
+        pages["Admin"] = list(admin_pages.values())
+        pages["Project Regular"] = list(regular_pages.values())
+
+        project_pages_cabang_1 = {
+            f"Project {name}": list(proj_pages.values())
+            for name, proj_pages in PROJECT_PAGE_MAP.items()
+            if name != "HPI"  # Ini adalah aturan pengecualiannya
+        }
+        pages.update(project_pages_cabang_1)
+        return pages
+
+    if role == "total_project_manager_hpi":
+        pages["Admin"] = list(admin_pages.values())
+
+        if "HPI" in PROJECT_PAGE_MAP:
+            pages["Project HPI"] = list(PROJECT_PAGE_MAP["HPI"].values())
+
+        return pages
+
     if role == "total_project_manager":
         pages["Admin"] = list(admin_pages.values())
         pages["Project Regular"] = list(regular_pages.values())
+        all_project_pages = {
+            f"Project {name}": list(pages.values())
+            for name, pages in PROJECT_PAGE_MAP.items()
+        }
         pages.update(all_project_pages)
         return pages
 

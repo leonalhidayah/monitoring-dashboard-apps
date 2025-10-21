@@ -56,7 +56,6 @@ def clean_admin_marketplace_data(df: pd.DataFrame) -> pd.DataFrame:
         "Harga Awal Produk": "harga_awal_produk",
         "Gudang Asal": "gudang_asal",
         "Jasa Kirim yang Dipilih Pembeli": "jasa_kirim",
-        "Metode Pengiriman": "metode_pengiriman",
         "Nomor Resi": "no_resi",
         "Ongkos Kirim": "ongkos_kirim",
         "Diskon Ongkos Kirim Penjual": "diskon_ongkos_kirim_penjual",

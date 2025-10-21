@@ -1583,7 +1583,7 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
     col1, col2, col3 = st.columns([1, 1, 1])
     col1.metric("Total Ad Spend", format_rupiah(total_spending_ads), border=True)
     col2.metric(
-        "Omset Berjalan (dari Iklan)", format_rupiah(total_omset_ads), border=True
+        "Omset Berjalan (Total Pesanan)", format_rupiah(total_omset_ads), border=True
     )
     col3.metric("Rasio Ads/Omset", f"{rasio_ads_overall:.2f} %", border=True)
 
@@ -1601,13 +1601,15 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
         df_ads.groupby("tanggal")[["total_omset", "total_spending"]]
         .sum()
         .reset_index()
-        .rename(columns={"total_omset": "Total Omset", "total_spending": "Total Ads"})
+        .rename(
+            columns={"total_omset": "Total Omset", "total_spending": "Total Ad Spend"}
+        )
     )
 
     fig_line = px.line(
         df_omset_daily,
         x="tanggal",
-        y=["Total Omset", "Total Ads"],
+        y=["Total Omset", "Total Ad Spend"],
         markers=True,
     )
     fig_line.update_traces(

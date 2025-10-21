@@ -321,6 +321,8 @@ TOKO_BANDUNG = [
     "SP juwara herbal official store",
     "TT juwaraherbal",
     "SP kudaku store",
+    "SP herba pusat indonesia",
+    "TT herba pusat indonesia",
 ]
 
 
