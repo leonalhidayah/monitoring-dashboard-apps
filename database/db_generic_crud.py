@@ -39,6 +39,38 @@ def fetch_table_data(conn, source_view: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# @st.cache_data(ttl=3600)
+# def fetch_table_data(_conn, source_view: str) -> pd.DataFrame:
+#     """
+#     Mengambil dan memproses data dari tabel/view yang ditentukan.
+#     Fungsi ini di-cache. 'conn' diambil dari scope global st.connection.
+
+#     Args:
+#         source_view (str): Nama tabel/view yang akan diambil datanya.
+
+#     Returns:
+#         pd.DataFrame: DataFrame berisi data dari tabel.
+#     """
+
+#     logging.info(f"CACHE MISS: Mengambil data dari: {source_view}...")
+#     try:
+#         query = f"SELECT * FROM {source_view} ORDER BY 1 DESC;"
+
+#         df = _conn.query(query)
+
+#         for col in df.columns:
+#             if "tanggal" in col or "_date" in col:
+#                 if pd.api.types.is_datetime64_any_dtype(df[col]):
+#                     df[col] = pd.to_datetime(df[col]).dt.date
+
+#         logging.info(f"Berhasil mengambil {len(df)} baris dari {source_view}.")
+#         return df
+
+#     except Exception as e:
+#         logging.error(f"Gagal mengambil data dari {source_view}: {e}")
+#         return pd.DataFrame()
+
+
 def process_generic_changes(
     conn, config: dict, original_df: pd.DataFrame, changes: dict
 ):
@@ -132,3 +164,93 @@ def process_generic_changes(
         raise e  # Lemparkan error agar bisa ditangkap oleh UI
     finally:
         cursor.close()
+
+
+# def process_generic_changes(
+#     conn,
+#     config: dict,
+#     original_df: pd.DataFrame,
+#     changes: dict,
+# ):
+#     """
+#     Memproses perubahan CRUD menggunakan st.connection (SQLAlchemy).
+#     ... (Docstring lainnya sama) ...
+#     """
+#     target_table = config.get("target_table", config.get("table_name"))
+#     primary_keys = config.get("primary_keys", [config.get("id_column")])
+
+#     logging.info(
+#         f"Processing changes for table: {target_table} with PKs: {primary_keys}"
+#     )
+
+#     with conn.session as s:
+#         try:
+#             # --- DELETE ---
+#             if "deleted_rows" in changes and changes["deleted_rows"]:
+#                 for index in changes["deleted_rows"]:
+#                     row_to_delete = original_df.iloc[index]
+
+#                     where_clauses = [f"{key} = :pk_{key}" for key in primary_keys]
+#                     where_sql = " AND ".join(where_clauses)
+
+#                     pk_dict = {f"pk_{key}": row_to_delete[key] for key in primary_keys}
+
+#                     logging.debug(
+#                         f"Deleting from {target_table} where {where_sql} with values {pk_dict}"
+#                     )
+#                     s.execute(
+#                         text(f"DELETE FROM {target_table} WHERE {where_sql}"), pk_dict
+#                     )
+
+#             # --- ADD (INSERT) ---
+#             if "added_rows" in changes and changes["added_rows"]:
+#                 for new_row in changes["added_rows"]:
+#                     filtered_row = {
+#                         col: val
+#                         for col, val in new_row.items()
+#                         if col in original_df.columns and val is not None
+#                     }
+#                     if not filtered_row:
+#                         continue
+
+#                     column_names = ", ".join(filtered_row.keys())
+#                     placeholders = ", ".join([f":{col}" for col in filtered_row.keys()])
+
+#                     query = f"INSERT INTO {target_table} ({column_names}) VALUES ({placeholders})"
+#                     logging.debug(
+#                         f"Inserting into {target_table} with query: {query} and values {filtered_row}"
+#                     )
+
+#                     s.execute(text(query), filtered_row)
+
+#             # --- EDIT (UPDATE) ---
+#             if "edited_rows" in changes and changes["edited_rows"]:
+#                 for index, updates in changes["edited_rows"].items():
+#                     original_row = original_df.iloc[int(index)]
+
+#                     set_clauses = [f"{key} = :set_{key}" for key in updates.keys()]
+#                     set_sql = ", ".join(set_clauses)
+
+#                     where_clauses = [f"{key} = :pk_{key}" for key in primary_keys]
+#                     where_sql = " AND ".join(where_clauses)
+
+#                     set_dict = {f"set_{key}": val for key, val in updates.items()}
+#                     pk_dict = {f"pk_{key}": original_row[key] for key in primary_keys}
+#                     params_dict = {**set_dict, **pk_dict}
+
+#                     query = f"UPDATE {target_table} SET {set_sql} WHERE {where_sql}"
+#                     logging.debug(
+#                         f"Updating {target_table} with query: {query} and params {params_dict}"
+#                     )
+#                     s.execute(text(query), params_dict)
+
+#             s.commit()
+#             logging.info(f"Successfully committed changes to {target_table}.")
+
+#         except Exception as e:
+#             # 6. Rollback jika ada error
+#             s.rollback()
+#             logging.error(
+#                 f"Error processing changes for {target_table}. Transaction rolled back. Error: {e}"
+#             )
+#             raise e

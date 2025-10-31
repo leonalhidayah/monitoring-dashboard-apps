@@ -67,6 +67,7 @@ FINANCE_TABLE_CONFIGS = {
                 "column_name": "tanggal",
                 "filter_type": "date_range",
                 "label": "Pilih Rentang Tanggal",
+                "date_range_type": "today",
             },
             {
                 "column_name": "project_name",
@@ -617,6 +618,60 @@ ADVERTISER_TABLE_CONFIGS = {
                 "CTR",
                 min_value=0.0,
             ),
+        },
+    },
+}
+
+
+REGULAR_TABLE_CONFIGS = {
+    "order_flag_reg": {
+        "display_name": "Order Flag Regular",
+        "table_name": "order_flag_reg",
+        "primary_keys": ["tanggal", "order_id"],
+        "filters": [
+            {
+                "column_name": "tanggal",
+                "filter_type": "date_range",
+                "label": "Pilih Rentang Tanggal",
+                "date_range_type": "today",
+            },
+            {
+                "column_name": "kategori",
+                "filter_type": "selectbox",
+                "label": "Pilih Kategori",
+                "options_source": {
+                    "table": "order_flag_reg",
+                    "column": "kategori",
+                },
+            },
+        ],
+        "column_order": [
+            "tanggal",
+            "order_id",
+            "kategori",
+            "nominal",
+            "keterangan",
+        ],
+        "column_config": {
+            "tanggal": st.column_config.DateColumn(
+                "Tanggal",
+                format="YYYY-MM-DD",
+                required=True,
+                default=get_now_in_jakarta(),
+            ),
+            "order_id": st.column_config.TextColumn("Order ID"),
+            "kategori": st.column_config.SelectboxColumn(
+                "Kategori",
+                options=["RETURN", "CANCEL"],
+                required=True,
+            ),
+            "nominal": st.column_config.NumberColumn(
+                "Nominal Adjustment (Rp)",
+                min_value=0,
+                format="accounting",
+                required=True,
+            ),
+            "keterangan": st.column_config.TextColumn("Keterangan"),
         },
     },
 }

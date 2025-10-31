@@ -1,4 +1,5 @@
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from data_preprocessor.utils import fetch_data
@@ -93,7 +94,7 @@ else:
                 label="Total Lead Masuk", value=f"{leads_received: .0f}", border=True
             )
         with col4:
-            st.metric(label="Total Cloding", value=f"{total_closing: .0f}", border=True)
+            st.metric(label="Total Closing", value=f"{total_closing: .0f}", border=True)
 
         m_col5, m_col6, m_col7, m_col8 = st.columns(4)
         with m_col5:
@@ -125,7 +126,106 @@ else:
             "Pilih metrik untuk melihat tren:",
             options=["gross_revenue", "spend", "leads_generated", "deals_closed"],
         )
-        st.line_chart(df_time_series, x="performance_date", y=selected_trend_metric)
+
+        fig_line = px.line(
+            df_time_series,
+            x="performance_date",
+            y=selected_trend_metric,
+            markers=True,
+        )
+        fig_line.update_traces(
+            hovertemplate="<b>%{x|%d %B %Y}</b><br><b>Amount:</b> Rp %{y:,.0f}<extra></extra>"
+        )
+        fig_line.update_layout(
+            xaxis_title="Tanggal",
+            yaxis_title="Jumlah (Rp)",
+            yaxis_tickformat=".2s",
+            legend_title_text="",
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5
+            ),
+        )
+        st.plotly_chart(fig_line, use_container_width=True)
+
+        # TODO: add option select product from df_filtered
+        st.subheader("Tren Metrik Harian per Brand")
+
+        col_metric, col_product = st.columns(2)
+
+        all_trend_metric = ["gross_revenue", "spend", "leads_generated", "deals_closed"]
+        options = ["Semua Metrik"] + all_trend_metric
+        with col_metric:
+            selected_trend_metric = st.multiselect(
+                "Pilih Metrik",
+                options=options,
+                key="select_trend_metric",
+                default=["gross_revenue", "spend"],
+            )
+
+        if "Semua Metrik" in selected_trend_metric:
+            selected_trend_metric = all_trend_metric
+
+        all_products_2 = sorted(df_filtered["product_name"].unique())
+        options_2 = ["Semua Produk"] + all_products_2
+        with col_product:
+            selected_products_2 = st.multiselect(
+                "Pilih Produk",
+                options=options_2,
+                key="select_product_2",
+                default="Semua Produk",
+            )
+
+        if "Semua Produk" in selected_products_2:
+            selected_products_2 = all_products_2
+
+        df_filtered_2 = df_filtered[
+            (df_filtered["product_name"].isin(selected_products_2))
+        ]
+
+        df_time_series_product = (
+            df_filtered_2.groupby(["performance_date", "product_name"])
+            .agg(
+                {
+                    "spend": "sum",
+                    "gross_revenue": "sum",
+                    "leads_generated": "sum",
+                    "deals_closed": "sum",
+                }
+            )
+            .reset_index()
+        )
+
+        # selected_trend_metric = st.selectbox(
+        #     "Pilih metrik untuk melihat tren:",
+        #     options=["gross_revenue", "spend", "leads_generated", "deals_closed"],
+        # )
+
+        fig_line = px.line(
+            df_time_series_product,
+            x="performance_date",
+            y=selected_trend_metric,
+            color="product_name",
+            custom_data=["product_name", "variable"],
+            markers=True,
+        )
+        fig_line.update_traces(
+            hovertemplate=(
+                "<b>product_name:</b> %{customdata[0]}<br>"
+                "<b>variable:</b> %{customdata[1]}<br>"
+                "<b>performance_date:</b> %{x|%b %d, %Y}<br>"
+                "<b>value:</b> Rp %{y:,.0f}<extra></extra>"
+            )
+        )
+        fig_line.update_layout(
+            xaxis_title="Tanggal",
+            yaxis_title="Jumlah (Rp)",
+            yaxis_tickformat=".2s",
+            legend_title_text="",
+            # legend=dict(
+            #     orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5
+            # ),
+        )
+        st.plotly_chart(fig_line, use_container_width=True)
 
         st.subheader("Perbandingan Performa")
         col_viz1, col_viz2 = st.columns(2)

@@ -226,9 +226,9 @@ def get_order_items():
     return get_table_data(table_name="order_items")
 
 
-def get_admin_shipments():
-    """Mengambil semua data dari tabel admin_shipments."""
-    return get_table_data(table_name="admin_shipments")
+def get_vw_admin_shipments():
+    """Mengambil semua data dari tabel vw_admin_shipments."""
+    return get_table_data(table_name="vw_admin_shipments")
 
 
 def get_vw_admin_shipments_delivery():

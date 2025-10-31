@@ -706,11 +706,11 @@ def initialize_marketplace_data_session(project_name, marketplace_list, store_li
             ),
             "Marketplace": marketplace_list,
             "Nama Toko": store_list,
-            "Spend": [0.0] * len(store_list),
-            "Konversi": [0] * len(store_list),
-            "Produk Terjual": [0] * len(store_list),
-            "Gross Revenue": [0.0] * len(store_list),
-            "CTR": [0.0] * len(store_list),
+            "Spend": None,
+            "Konversi": None,
+            "Produk Terjual": None,
+            "Gross Revenue": None,
+            "CTR": None,
         }
         st.session_state[session_key] = pd.DataFrame(data)
 
@@ -738,25 +738,25 @@ def get_marketplace_column_config(store_list):
             required=True,
         ),
         "Spend": st.column_config.NumberColumn(
-            "Spend (Rp)", min_value=None, format="accounting"
+            "Spend (Rp)", min_value=0.0, format="accounting", required=True
         ),
         "Konversi": st.column_config.NumberColumn(
-            "Konversi", min_value=None, step=1, format="%d"
+            "Konversi", min_value=0, step=1, format="%d"
         ),
         "Produk Terjual": st.column_config.NumberColumn(
             "Produk Terjual",
-            min_value=None,
+            min_value=0,
             step=1,
             format="%d",
         ),
         "Gross Revenue": st.column_config.NumberColumn(
-            "Gross Revenue (Rp)",
-            min_value=None,
-            format="accounting",
+            "Gross Revenue (Rp)", min_value=0.0, format="accounting", required=True
         ),
         "CTR": st.column_config.NumberColumn(
             "CTR",
-            min_value=None,
+            help="Click Through Rate harus antara 0 dan 100",
+            min_value=0,
+            max_value=100,
             format="%.2f",
         ),
     }
@@ -782,9 +782,9 @@ def initialize_cpas_data_session(project_name, store_list, akun_list):
             ),
             "Nama Toko": store_list,
             "Akun": akun_list,
-            "Spend": [0.0] * len(akun_list),
-            "Konversi": [0] * len(akun_list),
-            "Gross Revenue": [0.0] * len(akun_list),
+            "Spend": None,
+            "Konversi": None,
+            "Gross Revenue": None,
         }
         st.session_state[session_key] = pd.DataFrame(data)
 
@@ -812,7 +812,10 @@ def get_cpas_column_config(store_list, akun_list):
             required=True,
         ),
         "Spend": st.column_config.NumberColumn(
-            "Spend (Rp)", min_value=None, format="accounting"
+            "Spend (Rp)",
+            min_value=None,
+            format="accounting",
+            required=True,
         ),
         "Konversi": st.column_config.NumberColumn(
             "Konversi", min_value=None, step=1, format="%d"
@@ -821,6 +824,7 @@ def get_cpas_column_config(store_list, akun_list):
             "Gross Revenue (Rp)",
             min_value=None,
             format="accounting",
+            required=True,
         ),
     }
 
@@ -1359,7 +1363,7 @@ def get_adv_reg_column_config(store_list):
     }
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=3600)
 def fetch_data(_conn):
     """Mengambil semua data, diurutkan dengan channel."""
     query = "SELECT * FROM advertiser_cs_regular ORDER BY performance_date DESC, product_name, channel;"

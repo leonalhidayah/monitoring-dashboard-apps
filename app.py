@@ -26,21 +26,6 @@ finance_pages = {
         title="Budget Plan",
         icon=":material/finance_mode:",
     ),
-    "omset": st.Page(
-        "views/finance/omset.py",
-        title="Omset",
-        icon=":material/money_bag:",
-    ),
-    "budget_ads": st.Page(
-        "views/finance/budget_ads.py",
-        title="Budget Ads",
-        icon=":material/campaign:",
-    ),
-    "budget_non_ads": st.Page(
-        "views/finance/budget_non_ads.py",
-        title="Budget Non Ads",
-        icon=":material/campaign:",
-    ),
     "cashflow": st.Page(
         "views/finance/cashflow.py",
         title="Cashflow",
@@ -225,6 +210,19 @@ PROJECT_PAGE_MAP = {
     },
 }
 
+# admin_hpi_pages = {
+#     "mp_to_bs": st.Page(
+#         "views/admin/marketplace_to_bs.py",
+#         title="Marketplace to BigSeller",
+#         icon=":material/counter_1:",
+#     ),
+#     "marketplace": st.Page(
+#         "views/admin/admin_marketplace.py",
+#         title="Admin Marketplace",
+#         icon=":material/counter_2:",
+#     ),
+# }
+
 
 # 3. FUNGSI DINAMIS UNTUK MEMBANGUN NAVIGASI
 # ==============================================================================
@@ -288,12 +286,6 @@ def build_navigation_for_role(role, project_names=[]):
         for name, pages in PROJECT_PAGE_MAP.items()
     }
 
-    # if role == "total_project_manager":
-    #     pages["Admin"] = list(admin_pages.values())
-    #     pages["Project Regular"] = list(regular_pages.values())
-    #     pages.update(all_project_pages)
-    #     return pages
-
     if role == "total_project_manager_sadewa":
         pages["Admin"] = list(admin_pages.values())
         pages["Project Regular"] = list(regular_pages.values())
@@ -301,7 +293,7 @@ def build_navigation_for_role(role, project_names=[]):
         project_pages_cabang_1 = {
             f"Project {name}": list(proj_pages.values())
             for name, proj_pages in PROJECT_PAGE_MAP.items()
-            if name != "HPI"  # Ini adalah aturan pengecualiannya
+            if name != "HPI"
         }
         pages.update(project_pages_cabang_1)
         return pages
