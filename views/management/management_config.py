@@ -67,7 +67,7 @@ FINANCE_TABLE_CONFIGS = {
                 "column_name": "tanggal",
                 "filter_type": "date_range",
                 "label": "Pilih Rentang Tanggal",
-                "date_range_type": "today",
+                "date_range_type": "yesterday",
             },
             {
                 "column_name": "project_name",
@@ -633,7 +633,7 @@ REGULAR_TABLE_CONFIGS = {
                 "column_name": "tanggal",
                 "filter_type": "date_range",
                 "label": "Pilih Rentang Tanggal",
-                "date_range_type": "today",
+                "date_range_type": "yesterday",
             },
             {
                 "column_name": "kategori",
