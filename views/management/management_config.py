@@ -633,7 +633,7 @@ REGULAR_TABLE_CONFIGS = {
                 "column_name": "tanggal",
                 "filter_type": "date_range",
                 "label": "Pilih Rentang Tanggal",
-                "date_range_type": "yesterday",
+                "date_range_type": "today",
             },
             {
                 "column_name": "kategori",

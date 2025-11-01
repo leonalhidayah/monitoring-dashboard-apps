@@ -62,7 +62,7 @@ def standardize_silver_data(df):
         "Nama Pembeli",
     ]
 
-    upper_cols = ["Gudang", "Sesi Pengiriman", "Jenis Resi"]
+    upper_cols = ["Gudang", "Sesi Pengiriman", "Jenis Resi", "Status Pesanan"]
 
     df = clean_object_columns(df, lowercase_cols, case="lower")
     df = clean_object_columns(df, upper_cols, case="upper")
