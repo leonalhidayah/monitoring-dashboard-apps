@@ -255,10 +255,12 @@ ADV_CPAS_MAP_PROJECT = {
         "Nama Toko": [
             "SP enzhico",
             "TT enzhico authorized store",
+            "TT enzhico authorized store",
         ],
         "Akun": [
             "Enzhico CPAS 1",
             "Enzhico Tokopedia CPAS 1",
+            "TikTok Ads Enzhico",
         ],
     },
     "Kudaku": {
