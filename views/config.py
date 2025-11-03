@@ -283,6 +283,14 @@ ADV_CPAS_MAP_PROJECT = {
             "Erassgo mall 1",
         ],
     },
+    "HPI": {
+        "Nama Toko": [
+            "SP herba pusat indonesia",
+        ],
+        "Akun": [
+            "HPI CPAS 1",
+        ],
+    },
 }
 
 
