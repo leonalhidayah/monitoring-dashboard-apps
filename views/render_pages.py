@@ -1381,18 +1381,16 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
     """
     st.title(f"📊 Dashboard Finansial: {project_name}")
 
-    # --- Filter Periode di ATAS HALAMAN ---
     st.divider()
     col_header, col_filter = st.columns([2, 1])
     with col_header:
-        # Pindahkan header Omset ke dalam fungsinya sendiri
         pass
     with col_filter:
         today = date.today()
         start_default = today.replace(day=1)
         date_range = st.date_input(
             "Pilih Periode Analisis:",
-            value=(start_default, today),
+            value=(start_default, get_yesterday_in_jakarta()),
             key=f"date_filter_{project_name}",
         )
 

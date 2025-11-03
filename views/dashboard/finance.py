@@ -146,7 +146,9 @@ if selected_project:
         total_akrual = df["akrual_basis"].sum()
         total_cash = df["cash_basis"].sum()
         total_topup = df["aktual_topup"].sum()
-        total_cashout = df_cashflow_monitoring["Total Realisasi (Actual)"].sum()
+        total_cashout = df_cashflow_monitoring.query(
+            "`Parameter Budget` != 'Biaya Admin'"
+        )["Total Realisasi (Actual)"].sum()
         estimasi_profit = total_akrual - total_cashout
 
         kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
