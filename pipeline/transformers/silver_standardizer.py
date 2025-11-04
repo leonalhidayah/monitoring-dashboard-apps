@@ -13,6 +13,8 @@ from pipeline.utils.helpers import (
     clean_currency_columns,
     clean_datetime_columns,
     clean_object_columns,
+    fillna_by_other_column,
+    fillna_currency_with_rules,
     fix_misconverted_currency,
     standardize_mapping_column,
 )
@@ -72,6 +74,16 @@ def standardize_silver_data(df):
 
     df["Diskon Ongkos Kirim Marketplace"] = fix_misconverted_currency(
         df["Diskon Ongkos Kirim Marketplace"]
+    )
+
+    df = fillna_currency_with_rules(df)
+    df = fillna_currency_with_rules(df, fill_col="Subtotal Produk")
+    df["Harga Satuan"] = df["Harga Satuan"].fillna(df["Subtotal Produk"] / df["Jumlah"])
+    df = fillna_by_other_column(
+        df, fill_col="Harga Awal Produk", reference_col="Harga Satuan"
+    )
+    df = fillna_by_other_column(
+        df, fill_col="Nama Pembeli", reference_col="Nama Penerima"
     )
 
     df = clean_datetime_columns(df, datetime_cols)

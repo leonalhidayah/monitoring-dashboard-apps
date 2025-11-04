@@ -210,7 +210,6 @@ def standardize_mapping_column(df, column_name, mapping_dict, inplace=False):
     if column_name not in df.columns:
         raise KeyError(f"Kolom '{column_name}' tidak ditemukan di DataFrame")
 
-    # lakukan mapping dengan fallback ke nilai asli
     standardized_series = df[column_name].apply(
         lambda x: mapping_dict.get(str(x).strip(), x) if pd.notna(x) else x
     )
@@ -230,3 +229,61 @@ def load_dataframe(file):
         return pd.read_csv(file, dtype=str)
     else:
         raise ValueError("Format file tidak didukung. Harap upload .xlsx atau .csv")
+
+
+def fillna_currency_with_rules(
+    df,
+    fill_col="Total Pesanan",
+    reference_col="SKU",
+    jumlah_col="Jumlah",
+):
+    """
+    Mengisi nilai kosong di kolom total pesanan berdasarkan aturan bisnis:
+    - Rata-rata (Total Pesanan / Jumlah) per SKU digunakan untuk imputasi.
+    - Jika SKU tidak punya referensi valid (semua NaN), fallback ke median global Total Pesanan.
+
+    Args:
+        df (pd.DataFrame): Data input (misal data raw marketplace).
+        fill_col (str): Nama kolom total pesanan.
+        reference_col (str): Nama kolom SKU.
+        jumlah_col (str): Nama kolom jumlah item.
+        log (bool): Jika True, tampilkan informasi di log.
+
+    Returns:
+        pd.DataFrame: DataFrame dengan kolom total pesanan yang sudah diisi.
+    """
+
+    df = df.copy()
+
+    if "Jumlah" in df.columns:
+        df[jumlah_col] = pd.to_numeric(df[jumlah_col], errors="coerce")
+
+    valid_mask = df[fill_col].notna() & df[jumlah_col].notna()
+    df_valid = df.loc[valid_mask, [reference_col, fill_col, jumlah_col]].copy()
+    df_valid["avg_per_item"] = df_valid[fill_col] / df_valid[jumlah_col]
+
+    df_avg = (
+        df_valid.groupby(reference_col, as_index=False)["avg_per_item"]
+        .mean()
+        .rename(columns={"avg_per_item": "avg_per_item_sku"})
+    )
+
+    df_merged = df.merge(df_avg, on=reference_col, how="left")
+
+    global_median = df_valid[fill_col].median() / df_valid[jumlah_col].median()
+
+    na_mask = df_merged[fill_col].isna()
+
+    df_merged.loc[na_mask, fill_col] = (
+        df_merged.loc[na_mask, "avg_per_item_sku"].fillna(global_median)
+        * df_merged.loc[na_mask, jumlah_col]
+    )
+
+    df_merged.drop(columns=["avg_per_item_sku"], inplace=True)
+
+    return df_merged
+
+
+def fillna_by_other_column(df, fill_col, reference_col):
+    df[fill_col] = df[fill_col].fillna(df[reference_col])
+    return df
