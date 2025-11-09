@@ -28,9 +28,9 @@ from database.db_manager import (
     get_map_project_stores,
     get_target_ads_ratio,
     get_total_sales_target,
-    get_vw_admin_shipments,
     get_vw_ads_performance_summary,
     get_vw_ragular_performance_summary,
+    get_vw_shipments_delivery,
     insert_advertiser_cpas_data,
     insert_advertiser_marketplace_data,
 )
@@ -349,7 +349,7 @@ def display_admin_dashboard(project_name: str):
 
     # --- MEMUAT DAN MEMPROSES DATA ---
     try:
-        df_admin = get_vw_admin_shipments()
+        df_admin = get_vw_shipments_delivery()
 
         df_admin["timestamp_input_data"] = pd.to_datetime(
             df_admin["timestamp_input_data"]
@@ -1238,8 +1238,6 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
     quarter = (tgl_akhir.month - 1) // 3 + 1
     target_rasio = get_target_ads_ratio(project_id, year, quarter)
 
-    # --- PERBAIKAN BUG ---
-    # Cek jika target_rasio tidak ada, hentikan eksekusi bagian ini
     if target_rasio is None or target_rasio == 0:
         st.warning(
             f"Target rasio untuk Q{quarter} {year} belum diatur. Analisis iklan tidak dapat dilanjutkan."
@@ -1371,9 +1369,6 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
         st.dataframe(styled_df_detailed, width="stretch")
 
 
-# --- FUNGSI UTAMA (SEKARANG JAUH LEBIH RAPI) ---
-
-
 def display_budgeting_dashboard(project_id: int, project_name: str):
     """
     Menampilkan dashboard finansial lengkap dengan gauge chart dinamis.
@@ -1410,3 +1405,70 @@ def display_budgeting_dashboard(project_id: int, project_name: str):
 
     # --- Bagian 2: Analisis Iklan (Modular) ---
     display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir)
+
+
+def render_regular_adv_cs_page(project_name: str, project_config: dict):
+    mp_list = project_config["Marketplace"]
+    toko_list = project_config["Nama Toko"]
+
+    st.header(f"Advertiser Marketplace {project_name}")
+
+    df_key = f"df_{project_name.lower().replace(' ', '_')}_marketplace"
+    preview_key = f"show_preview_{project_name.lower().replace(' ', '_')}_marketplace"
+
+    # Inisialisasi DataFrame
+    initialize_marketplace_data_session(
+        project_name.lower().replace(" ", "_"),
+        mp_list,
+        toko_list,
+    )
+
+    # Form input
+    with st.form(f"form_{project_name.lower().replace(' ', '_')}_marketplace"):
+        st.session_state[df_key] = st.data_editor(
+            st.session_state[df_key],
+            num_rows="dynamic",
+            width="stretch",
+            column_config=get_marketplace_column_config(toko_list),
+        )
+        submitted = st.form_submit_button("Simpan & Pratinjau")
+        if submitted:
+            st.session_state[preview_key] = True
+
+    # Preview
+    if st.session_state.get(preview_key, False):
+        cleaned_df = st.session_state[df_key].dropna(how="all")
+        if not cleaned_df.empty:
+            st.markdown("---")
+            st.subheader(
+                f"Pratinjau Data untuk {project_name}_{datetime.today().strftime('%d-%m-%Y %H:%M:%S')}"
+            )
+            st.dataframe(
+                cleaned_df,
+                width="stretch",
+                column_config=get_marketplace_column_config(toko_list),
+            )
+
+            button_cols = st.columns([8, 3, 1.9])
+            with button_cols[0]:
+                if st.button(
+                    "Ya, Simpan ke Database",
+                    key=f"save_button_{project_name.lower().replace(' ', '_')}_marketplace",
+                ):
+                    result = insert_advertiser_marketplace_data(cleaned_df)
+                    if result["status"] == "success":
+                        st.success(result["message"])
+                        st.session_state[preview_key] = False
+                    else:
+                        st.error(
+                            f"Gagal menyimpan data omset {project_name}: {result['message']}"
+                        )
+            with button_cols[2]:
+                if st.button(
+                    "OMG, Ada yg slhhhh",
+                    key=f"update_button_{project_name.lower().replace(' ', '_')}_marketplace",
+                ):
+                    st.session_state[preview_key] = False
+                    st.rerun()
+        else:
+            st.warning("Tidak ada data valid untuk disimpan.")

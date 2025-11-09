@@ -1,14 +1,10 @@
 import streamlit as st
 
-from database.db_connection import get_connection
+from database.db_connection import get_engine
 
 # Impor "jantung" dari sistem kita
 from views.management.generic_editor_renderer import render_generic_editor
 from views.management.management_config import FINANCE_TABLE_CONFIGS
-
-# =============================================================================
-# ORKESTRATOR UTAMA APLIKASI DATA MANAGEMENT
-# =============================================================================
 
 st.title("Finance Data Management System")
 st.caption(
@@ -32,20 +28,17 @@ selected_table_key = table_options[selected_display_name]
 
 st.divider()
 
-conn = None
+engine = None
 try:
-    # conn = st.connection("pipeline_test_db", type="sql")
-    conn = get_connection()
-    if conn:
+    engine = get_engine()
+
+    if engine:
         active_config = FINANCE_TABLE_CONFIGS[selected_table_key]
 
-        render_generic_editor(conn=conn, config=active_config)
+        render_generic_editor(engine, config=active_config)
 
     else:
         st.error("Gagal terhubung ke database. Periksa koneksi Anda.")
 
 except Exception as e:
     st.error(f"Terjadi kesalahan di aplikasi utama: {e}")
-finally:
-    if conn:
-        conn.close()

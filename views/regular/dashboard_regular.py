@@ -195,11 +195,6 @@ else:
             .reset_index()
         )
 
-        # selected_trend_metric = st.selectbox(
-        #     "Pilih metrik untuk melihat tren:",
-        #     options=["gross_revenue", "spend", "leads_generated", "deals_closed"],
-        # )
-
         fig_line = px.line(
             df_time_series_product,
             x="performance_date",
@@ -221,9 +216,6 @@ else:
             yaxis_title="Jumlah (Rp)",
             yaxis_tickformat=".2s",
             legend_title_text="",
-            # legend=dict(
-            #     orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5
-            # ),
         )
         st.plotly_chart(fig_line, use_container_width=True)
 

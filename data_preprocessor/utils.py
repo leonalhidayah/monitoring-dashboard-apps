@@ -738,7 +738,9 @@ def get_marketplace_column_config(store_list):
             required=True,
         ),
         "Spend": st.column_config.NumberColumn(
-            "Spend (Rp)", min_value=0.0, format="accounting", required=True
+            "Spend (Rp)",
+            min_value=0.0,
+            format="accounting",
         ),
         "Konversi": st.column_config.NumberColumn(
             "Konversi", min_value=0, step=1, format="%d"
@@ -750,13 +752,15 @@ def get_marketplace_column_config(store_list):
             format="%d",
         ),
         "Gross Revenue": st.column_config.NumberColumn(
-            "Gross Revenue (Rp)", min_value=0.0, format="accounting", required=True
+            "Gross Revenue (Rp)",
+            min_value=0.0,
+            format="accounting",
         ),
         "CTR": st.column_config.NumberColumn(
             "CTR",
-            help="Click Through Rate harus antara 0 dan 100",
-            min_value=0,
-            max_value=100,
+            help="Click Through Rate harus antara 0 dan 10",
+            min_value=0.0,
+            max_value=10.0,
             format="%.2f",
         ),
     }
@@ -813,18 +817,16 @@ def get_cpas_column_config(store_list, akun_list):
         ),
         "Spend": st.column_config.NumberColumn(
             "Spend (Rp)",
-            min_value=None,
+            min_value=0,
             format="accounting",
-            required=True,
         ),
         "Konversi": st.column_config.NumberColumn(
-            "Konversi", min_value=None, step=1, format="%d"
+            "Konversi", min_value=0, step=1, format="%d"
         ),
         "Gross Revenue": st.column_config.NumberColumn(
             "Gross Revenue (Rp)",
-            min_value=None,
+            min_value=0,
             format="accounting",
-            required=True,
         ),
     }
 
@@ -1449,3 +1451,78 @@ def process_changes(conn, original_df, changes):
             ]
             cur.execute(query, params)
     conn.commit()
+
+
+def initialize_adv_cs_reg_data_session(project_name, marketplace_list, store_list):
+    """
+    Menginisialisasi DataFrame di st.session_state untuk brand tertentu jika belum ada.
+    """
+    session_key = f"df_{project_name}_marketplace"
+
+    if session_key not in st.session_state:
+        # Buat DataFrame default dengan kolom yang dibutuhkan
+        data = {
+            "Tanggal": pd.Series(
+                get_yesterday_in_jakarta(),
+                index=range(len(store_list)),
+            ),
+            "Nama Produk": marketplace_list,
+            "Channel": store_list,
+            "Spend": None,
+            "Konversi": None,
+            "Produk Terjual": None,
+            "Gross Revenue": None,
+            "CTR": None,
+        }
+        st.session_state[session_key] = pd.DataFrame(data)
+
+
+def get_adv_cs_reg_column_config(store_list):
+    """
+    Mengembalikan konfigurasi kolom yang konsisten untuk st.data_editor.
+    """
+
+    return {
+        "Tanggal": st.column_config.DateColumn(
+            "Tanggal",
+            min_value=pd.Timestamp(2023, 1, 1),
+            format="YYYY-MM-DD",
+            required=True,
+        ),
+        "Marketplace": st.column_config.SelectboxColumn(
+            "Marketplace",
+            options=MARKETPLACE_LIST,
+            required=True,
+        ),
+        "Nama Toko": st.column_config.SelectboxColumn(
+            "Nama Toko",
+            options=store_list,
+            required=True,
+        ),
+        "Spend": st.column_config.NumberColumn(
+            "Spend (Rp)",
+            min_value=0.0,
+            format="accounting",
+        ),
+        "Konversi": st.column_config.NumberColumn(
+            "Konversi", min_value=0, step=1, format="%d"
+        ),
+        "Produk Terjual": st.column_config.NumberColumn(
+            "Produk Terjual",
+            min_value=0,
+            step=1,
+            format="%d",
+        ),
+        "Gross Revenue": st.column_config.NumberColumn(
+            "Gross Revenue (Rp)",
+            min_value=0.0,
+            format="accounting",
+        ),
+        "CTR": st.column_config.NumberColumn(
+            "CTR",
+            help="Click Through Rate harus antara 0 dan 10",
+            min_value=0.0,
+            max_value=10.0,
+            format="%.2f",
+        ),
+    }

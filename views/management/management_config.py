@@ -3,14 +3,16 @@ from datetime import datetime, timedelta
 import pytz
 import streamlit as st
 
-from database.db_manager import (
-    get_dim_cpas_accounts,
-    get_dim_marketplaces,
-    get_dim_platforms,
-    get_dim_projects,
-    get_dim_stores,
-    get_dim_topup_account_regular,
-)
+from database.queries import dimmension_query as dim
+
+# from database.db_manager import (
+#     get_dim_cpas_accounts,
+#     get_dim_marketplaces,
+#     get_dim_platforms,
+#     get_dim_projects,
+#     get_dim_stores,
+#     get_dim_topup_account_regular,
+# )
 
 
 def get_yesterday_in_jakarta():
@@ -23,14 +25,15 @@ def get_now_in_jakarta():
     return datetime.now(tz)
 
 
-MARKETPLACE_LIST = set(get_dim_marketplaces()["nama_marketplace"].tolist())
-STORE_LIST = set(get_dim_stores()["nama_toko"].tolist())
-# STORE_LIST_ADV = STORE_LIST | {"SP zhi yang yao (iklan eksternal FB)"}
-PLARFORM_REGULAR = set(get_dim_platforms()["nama_platform"].tolist())
-TOPUP_AKUN_REGULAR = set(get_dim_topup_account_regular()["nama_akun"].tolist())
-AKUN_CPAS_LIST = set(get_dim_cpas_accounts()["nama_akun_cpas"].tolist())
-STORE_WITH_CPAS_LIST = set(get_dim_cpas_accounts()["nama_toko"].tolist())
-PROJECT_LIST = set(get_dim_projects()["project_name"].tolist())
+# dim.get_nama_marketplace() = set(get_dim_marketplaces()["nama_marketplace"].tolist())
+# dim.get_nama_toko() = set(get_dim_stores()["nama_toko"].tolist())
+# PLARFORM_REGULAR = set(get_dim_platforms()["nama_platform"].tolist())
+# TOPUP_AKUN_REGULAR = set(get_dim_topup_account_regular()["nama_akun"].tolist())
+# AKUN_CPAS_LIST = set(get_dim_cpas_accounts()["nama_akun_cpas"].tolist())
+# STORE_WITH_CPAS_LIST = set(get_dim_cpas_accounts()["nama_toko"].tolist())
+# PROJECT_LIST = set(get_dim_projects()["project_name"].tolist())
+# TIPE_BEBAN_LIST = set(get_tipe_beban()["tipe_beban"].tolist())
+# BIDANG_LIST = set(get_bidang()["bidang"].tolist())
 
 
 # =============================================================================
@@ -104,8 +107,6 @@ FINANCE_TABLE_CONFIGS = {
             "pendapatan_kotor",
             "biaya_admin",
             "cash_basis",
-            "bukti",
-            "akun_bank",
         ],
         "column_config": {
             "tanggal": st.column_config.DateColumn(
@@ -116,12 +117,12 @@ FINANCE_TABLE_CONFIGS = {
             ),
             "marketplace": st.column_config.SelectboxColumn(
                 "Marketplace",
-                options=MARKETPLACE_LIST,
+                options=dim.get_nama_marketplace(),
                 required=True,
             ),
             "nama_toko": st.column_config.SelectboxColumn(
                 "Nama Toko",
-                options=STORE_LIST,
+                options=dim.get_nama_toko(),
                 required=True,
             ),
             "pendapatan_kotor": st.column_config.NumberColumn(
@@ -141,8 +142,6 @@ FINANCE_TABLE_CONFIGS = {
                 min_value=0,
                 format="accounting",
             ),
-            "bukti": st.column_config.TextColumn("Bukti (Link)"),
-            "akun_bank": st.column_config.TextColumn("Akun Bank"),
         },
     },
     "finance_omset_reg": {
@@ -173,8 +172,6 @@ FINANCE_TABLE_CONFIGS = {
             "platform",
             "akrual_basis",
             "cash_basis",
-            "bukti",
-            "akun_bank",
         ],
         "column_config": {
             "tanggal": st.column_config.DateColumn(
@@ -185,7 +182,7 @@ FINANCE_TABLE_CONFIGS = {
             ),
             "platform": st.column_config.SelectboxColumn(
                 "Platform",
-                options=PLARFORM_REGULAR,
+                options=dim.get_nama_platform(),
                 required=True,
             ),
             "akrual_basis": st.column_config.NumberColumn(
@@ -199,8 +196,6 @@ FINANCE_TABLE_CONFIGS = {
                 min_value=0,
                 format="accounting",
             ),
-            "bukti": st.column_config.TextColumn("Bukti (Link)"),
-            "akun_bank": st.column_config.TextColumn("Akun Bank"),
         },
     },
     "finance_budget_ads": {
@@ -260,12 +255,12 @@ FINANCE_TABLE_CONFIGS = {
             ),
             "marketplace": st.column_config.SelectboxColumn(
                 "Marketplace",
-                options=MARKETPLACE_LIST,
+                options=dim.get_nama_marketplace(),
                 required=True,
             ),
             "nama_toko": st.column_config.SelectboxColumn(
                 "Nama Toko",
-                options=STORE_LIST,
+                options=dim.get_nama_toko(),
                 required=True,
             ),
             "nominal_aktual_ads": st.column_config.NumberColumn(
@@ -333,12 +328,12 @@ FINANCE_TABLE_CONFIGS = {
             ),
             "nama_toko": st.column_config.SelectboxColumn(
                 "Nama Toko",
-                options=STORE_WITH_CPAS_LIST,
+                options=dim.get_nama_toko_cpas(),
                 required=True,
             ),
             "akun": st.column_config.SelectboxColumn(
                 "Akun",
-                options=AKUN_CPAS_LIST,
+                options=dim.get_nama_akun_cpas(),
                 required=True,
             ),
             "nominal_aktual_ads": st.column_config.NumberColumn(
@@ -386,7 +381,7 @@ FINANCE_TABLE_CONFIGS = {
             ),
             "akun": st.column_config.SelectboxColumn(
                 "Akun",
-                options=TOPUP_AKUN_REGULAR,
+                options=dim.get_nama_akun_topup_regular(),
                 required=True,
             ),
             "nominal_aktual_ads": st.column_config.NumberColumn(
@@ -454,12 +449,12 @@ FINANCE_TABLE_CONFIGS = {
             ),
             "marketplace": st.column_config.SelectboxColumn(
                 "Marketplace",
-                options=MARKETPLACE_LIST,
+                options=dim.get_nama_marketplace(),
                 required=True,
             ),
             "nama_toko": st.column_config.SelectboxColumn(
                 "Nama Toko",
-                options=STORE_LIST,
+                options=dim.get_nama_toko(),
                 required=True,
             ),
             "nominal_aktual_non_ads": st.column_config.NumberColumn(
@@ -509,7 +504,7 @@ FINANCE_TABLE_CONFIGS = {
             ),
             "nama_project": st.column_config.SelectboxColumn(
                 "Nama Project",
-                options=PROJECT_LIST,
+                options=dim.get_nama_project(),
                 required=True,
             ),
             "keterangan": st.column_config.TextColumn(
@@ -520,6 +515,94 @@ FINANCE_TABLE_CONFIGS = {
                 min_value=0,
                 format="accounting",
                 required=True,
+            ),
+        },
+    },
+    "finance_transactions": {
+        "display_name": "Cashflow",
+        "table_name": "vw_finance_transactions",
+        "primary_keys": [
+            "transaction_id",
+        ],
+        "filters": [
+            {
+                "column_name": "transaction_date",
+                "filter_type": "date_range",
+                "label": "Pilih Rentang Tanggal",
+            },
+            {
+                "column_name": "project_name",
+                "filter_type": "selectbox",
+                "label": "Pilih Project",
+                "options_source": {
+                    "table": "dim_projects",
+                    "column": "project_name",
+                },
+            },
+            {
+                "column_name": "bidang",
+                "filter_type": "selectbox",
+                "label": "Pilih Bidang",
+                "options_source": {
+                    "table": "dim_expense_categories",
+                    "column": "bidang",
+                },
+            },
+            {
+                "column_name": "tipe_beban",
+                "filter_type": "selectbox",
+                "label": "Pilih Tipe Beban",
+                "options_source": {
+                    "table": "dim_expense_categories",
+                    "column": "tipe_beban",
+                },
+            },
+        ],
+        "column_order": [
+            "transaction_date",
+            "project_name",
+            "transaction_type",
+            "amount",
+            "bidang",
+            "tipe_beban",
+            "description",
+        ],
+        "column_config": {
+            "transaction_date": st.column_config.DateColumn(
+                "Tanggal",
+                format="YYYY-MM-DD",
+                required=True,
+                default=get_now_in_jakarta(),
+            ),
+            "project_name": st.column_config.SelectboxColumn(
+                "Nama Project",
+                options=dim.get_nama_project(),
+                required=True,
+            ),
+            "transaction_type": st.column_config.SelectboxColumn(
+                "IN / OUT",
+                options=["IN", "OUT"],
+                required=True,
+                default="OUT",
+            ),
+            "amount": st.column_config.NumberColumn(
+                "Nominal (Rp)",
+                min_value=0,
+                format="accounting",
+                required=True,
+            ),
+            "bidang": st.column_config.SelectboxColumn(
+                "Bidang",
+                options=dim.get_bidang(),
+                required=True,
+            ),
+            "tipe_beban": st.column_config.SelectboxColumn(
+                "Tipe Beban",
+                options=dim.get_tipe_beban(),
+                required=True,
+            ),
+            "description": st.column_config.TextColumn(
+                "Keterangan",
             ),
         },
     },
@@ -567,6 +650,7 @@ ADVERTISER_TABLE_CONFIGS = {
                 "options_source": {
                     "table": "dim_stores",
                     "column": "nama_toko",
+                    "needs_project_context": True,
                 },
             },
         ],
@@ -589,12 +673,12 @@ ADVERTISER_TABLE_CONFIGS = {
             ),
             "marketplace": st.column_config.SelectboxColumn(
                 "Marketplace",
-                options=MARKETPLACE_LIST,
+                options=dim.get_nama_marketplace(),
                 required=True,
             ),
             "nama_toko": st.column_config.SelectboxColumn(
                 "Nama Toko",
-                options=STORE_LIST,
+                options=[],
                 required=True,
             ),
             "spend": st.column_config.NumberColumn(
@@ -616,7 +700,93 @@ ADVERTISER_TABLE_CONFIGS = {
             ),
             "ctr": st.column_config.NumberColumn(
                 "CTR",
+                max_value=10.0,
                 min_value=0.0,
+            ),
+        },
+    },
+    "advertiser_cpas": {
+        "display_name": "Advertiser CPAS",
+        "source_view": "vw_advertiser_cpas",
+        "target_table": "advertiser_cpas",
+        "primary_keys": [
+            "tanggal",
+            "akun",
+        ],
+        "filters": [
+            {
+                "column_name": "tanggal",
+                "filter_type": "date_range",
+                "label": "Pilih Rentang Tanggal",
+            },
+            {
+                "column_name": "project_name",
+                "filter_type": "selectbox",
+                "label": "Pilih Project",
+                "options_source": {
+                    "table": "dim_projects",
+                    "column": "project_name",
+                },
+            },
+            {
+                "column_name": "nama_toko",
+                "filter_type": "selectbox",
+                "label": "Pilih Toko",
+                "options_source": {
+                    "table": "dim_stores",
+                    "column": "nama_toko",
+                    "needs_project_context": True,
+                },
+            },
+            {
+                "column_name": "akun",
+                "filter_type": "selectbox",
+                "label": "Pilih Akun CPAS",
+                "options_source": {
+                    "table": "dim_cpas_accounts",
+                    "column": "nama_akun_cpas",
+                    "needs_project_context": True,
+                },
+            },
+        ],
+        "column_order": [
+            "tanggal",
+            "nama_toko",
+            "akun",
+            "spend",
+            "konversi",
+            "gross_revenue",
+        ],
+        "column_config": {
+            "tanggal": st.column_config.DateColumn(
+                "Tanggal",
+                format="YYYY-MM-DD",
+                required=True,
+                default=get_yesterday_in_jakarta(),
+            ),
+            "nama_toko": st.column_config.SelectboxColumn(
+                "Nama Toko",
+                options=[],
+                required=True,
+            ),
+            "akun": st.column_config.SelectboxColumn(
+                "Akun",
+                options=[],
+                required=True,
+            ),
+            "spend": st.column_config.NumberColumn(
+                "Spend (Rp)",
+                min_value=0,
+                format="accounting",
+                required=True,
+            ),
+            "konversi": st.column_config.NumberColumn(
+                "Konversi", min_value=0, format="%d"
+            ),
+            "gross_revenue": st.column_config.NumberColumn(
+                "Gross Revenue (Rp)",
+                min_value=0,
+                format="accounting",
             ),
         },
     },
@@ -624,6 +794,109 @@ ADVERTISER_TABLE_CONFIGS = {
 
 
 REGULAR_TABLE_CONFIGS = {
+    "advertiser_cs_regular": {
+        "display_name": "Advertiser & CS Regular",
+        "source_view": "vw_advertiser_cs_regular_with_tim",
+        "target_table": "advertiser_cs_regular",
+        "primary_keys": ["performance_date", "product_name"],
+        "filters": [
+            {
+                "column_name": "performance_date",
+                "filter_type": "date_range",
+                "label": "Pilih Rentang Tanggal",
+                "date_range_type": "yesterday",
+            },
+            {
+                "column_name": "product_name",
+                "filter_type": "selectbox",
+                "label": "Pilih Produk",
+                "options_source": {
+                    "table": "advertiser_cs_regular",
+                    "column": "product_name",
+                },
+            },
+            {
+                "column_name": "channel",
+                "filter_type": "selectbox",
+                "label": "Pilih Channel",
+                "options_source": {
+                    "table": "advertiser_cs_regular",
+                    "column": "channel",
+                },
+            },
+            {
+                "column_name": "tim",
+                "filter_type": "selectbox",
+                "label": "Pilih Tim",
+                "options_source": {
+                    "table": "dim_reg_products",
+                    "column": "tim",
+                },
+            },
+        ],
+        "column_order": [
+            "performance_date",
+            "product_name",
+            "channel",
+            "spend",
+            "reach",
+            "leads_generated",
+            "leads_received",
+            "deals_closed",
+            "gross_revenue",
+        ],
+        "column_config": {
+            "performance_date": st.column_config.DateColumn(
+                "Tanggal",
+                format="YYYY-MM-DD",
+                required=True,
+                default=get_yesterday_in_jakarta(),
+            ),
+            "product_name": st.column_config.SelectboxColumn(
+                "Nama Produk",
+                options=["RETURN", "CANCEL"],
+                required=True,
+            ),
+            "channel": st.column_config.SelectboxColumn(
+                "Channel",
+                options=["Order Online", "CTWA"],
+                required=True,
+            ),
+            "spend": st.column_config.NumberColumn(
+                "Spend (Rp)",
+                min_value=0,
+                format="accounting",
+                required=True,
+            ),
+            "reach": st.column_config.NumberColumn(
+                "Reach",
+                min_value=0,
+                format="localized",
+                required=True,
+            ),
+            "leads_generated": st.column_config.NumberColumn(
+                "Leads (Iklan)",
+                min_value=0,
+                format="localized",
+                required=True,
+            ),
+            "leads_received": st.column_config.NumberColumn(
+                "Leads (CS)",
+                min_value=0,
+                format="localized",
+            ),
+            "deals_closed": st.column_config.NumberColumn(
+                "Closing",
+                min_value=0,
+                format="localized",
+            ),
+            "gross_revenue": st.column_config.NumberColumn(
+                "Gross Revenue (Rp)",
+                min_value=0,
+                format="accounting",
+            ),
+        },
+    },
     "order_flag_reg": {
         "display_name": "Order Flag Regular",
         "table_name": "order_flag_reg",

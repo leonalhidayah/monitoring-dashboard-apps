@@ -112,6 +112,11 @@ def get_dim_marketplaces():
     )
 
 
+def get_dim_reg_products():
+    """Mengambil semua data dari tabel dim_reg_products."""
+    return get_table_data(table_name="dim_reg_products")
+
+
 def get_dim_platforms():
     """Mengambil semua data dari tabel dim_platforms."""
     return get_table_data(table_name="dim_platforms", order_by_column="platform_id")
@@ -229,6 +234,11 @@ def get_order_items():
 def get_vw_admin_shipments():
     """Mengambil semua data dari tabel vw_admin_shipments."""
     return get_table_data(table_name="vw_admin_shipments")
+
+
+def get_vw_shipments_delivery():
+    """Mengambil semua data dari tabel vw_shipments_delivery."""
+    return get_table_data(table_name="vw_shipments_delivery")
 
 
 def get_vw_admin_shipments_delivery():
@@ -865,6 +875,11 @@ def insert_advertiser_marketplace_data(data: pd.DataFrame):
         conn = get_connection()
         cur = conn.cursor()
 
+        data = data.dropna(
+            subset=["Spend", "Konversi", "Produk Terjual", "Gross Revenue", "CTR"],
+            how="all",
+        )
+
         query = """
             INSERT INTO advertiser_marketplace (
                 tanggal, marketplace, nama_toko, spend, konversi,
@@ -956,6 +971,11 @@ def insert_advertiser_cpas_data(data: pd.DataFrame):
     try:
         conn = get_connection()
         cur = conn.cursor()
+
+        data = data.dropna(
+            subset=["Spend", "Konversi", "Gross Revenue"],
+            how="all",
+        )
 
         query = """
             INSERT INTO advertiser_cpas (tanggal, nama_toko, akun, spend, konversi, gross_revenue)

@@ -3,7 +3,7 @@ import streamlit_authenticator as stauth
 
 from database.db_connection import get_connection
 
-# 1. Konfigurasi Halaman (Hanya sekali di paling atas)
+# 1. Konfigurasi Halaman
 st.set_page_config(
     page_title="AMS Dashboard", layout="wide", page_icon="assets/ams-logo-crop.PNG"
 )
@@ -82,6 +82,11 @@ PROJECT_PAGE_MAP = {
             title="Entry Advertiser",
             icon=":material/campaign:",
         ),
+        "data_management_adv": st.Page(
+            "views/advertiser/zyy_adv_data_management.py",
+            title="Data Mangement",
+            icon=":material/campaign:",
+        ),
         "dash_budget": st.Page(
             "views/dashboard/project_zyy/dashboard_budgeting_zyy.py",
             title="Dashboard Budgeting",
@@ -102,6 +107,11 @@ PROJECT_PAGE_MAP = {
         "entry_adv": st.Page(
             "views/advertiser/juw_advertiser.py",
             title="Entry Advertiser",
+            icon=":material/campaign:",
+        ),
+        "data_management_adv": st.Page(
+            "views/advertiser/juw_adv_data_management.py",
+            title="Data Mangement",
             icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
@@ -126,6 +136,11 @@ PROJECT_PAGE_MAP = {
             title="Entry Advertiser",
             icon=":material/campaign:",
         ),
+        "data_management_adv": st.Page(
+            "views/advertiser/enz_adv_data_management.py",
+            title="Data Mangement",
+            icon=":material/campaign:",
+        ),
         "dash_budget": st.Page(
             "views/dashboard/project_enz/dashboard_budgeting_enz.py",
             title="Dashboard Budgeting",
@@ -146,6 +161,11 @@ PROJECT_PAGE_MAP = {
         "entry_adv": st.Page(
             "views/advertiser/kdk_advertiser.py",
             title="Entry Advertiser",
+            icon=":material/campaign:",
+        ),
+        "data_management_adv": st.Page(
+            "views/advertiser/kdk_adv_data_management.py",
+            title="Data Mangement",
             icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
@@ -170,6 +190,11 @@ PROJECT_PAGE_MAP = {
             title="Entry Advertiser",
             icon=":material/campaign:",
         ),
+        "data_management_adv": st.Page(
+            "views/advertiser/era_adv_data_management.py",
+            title="Data Mangement",
+            icon=":material/campaign:",
+        ),
         "dash_budget": st.Page(
             "views/dashboard/project_era/dashboard_budgeting_era.py",
             title="Dashboard Budgeting",
@@ -192,6 +217,11 @@ PROJECT_PAGE_MAP = {
             title="Entry Advertiser",
             icon=":material/campaign:",
         ),
+        "data_management_adv": st.Page(
+            "views/advertiser/hpi_adv_data_management.py",
+            title="Data Mangement",
+            icon=":material/campaign:",
+        ),
         "dash_budget": st.Page(
             "views/dashboard/project_hpi/dashboard_budgeting_hpi.py",
             title="Dashboard Budgeting",
@@ -210,27 +240,12 @@ PROJECT_PAGE_MAP = {
     },
 }
 
-# admin_hpi_pages = {
-#     "mp_to_bs": st.Page(
-#         "views/admin/marketplace_to_bs.py",
-#         title="Marketplace to BigSeller",
-#         icon=":material/counter_1:",
-#     ),
-#     "marketplace": st.Page(
-#         "views/admin/admin_marketplace.py",
-#         title="Admin Marketplace",
-#         icon=":material/counter_2:",
-#     ),
-# }
-
 
 # 3. FUNGSI DINAMIS UNTUK MEMBANGUN NAVIGASI
-# ==============================================================================
 def build_navigation_for_role(role, project_names=[]):
     """Membangun dictionary navigasi berdasarkan peran dan proyek yang diakses."""
     pages = {"Home": [home_page]}
 
-    # --- PERAN BARU UNTUK JALUR REGULAR ---
     if role == "adv_cs_regular":
         pages["Menu Regular"] = [
             regular_pages["entry_zyy_juw"],
@@ -242,9 +257,7 @@ def build_navigation_for_role(role, project_names=[]):
     if role == "project_manager_reg":
         pages["Menu Regular"] = list(regular_pages.values())
         return pages
-    # --- AKHIR PENAMBAHAN PERAN BARU ---
 
-    # Peran-peran spesifik lainnya
     if role == "finance":
         pages["Finance"] = list(finance_pages.values())
         for proj_name, proj_pages in PROJECT_PAGE_MAP.items():
@@ -265,6 +278,7 @@ def build_navigation_for_role(role, project_names=[]):
             if proj_name in PROJECT_PAGE_MAP:
                 pages[f"Project {proj_name}"] = [
                     PROJECT_PAGE_MAP[proj_name]["entry_adv"],
+                    PROJECT_PAGE_MAP[proj_name]["data_management_adv"],
                     PROJECT_PAGE_MAP[proj_name]["dash_adv"],
                 ]
         return pages
@@ -323,13 +337,11 @@ def build_navigation_for_role(role, project_names=[]):
         pages.update(all_project_pages)
         return pages
 
-    return pages  # Default (hanya home) untuk peran yang tidak dikenal
+    return pages
 
 
 # 4. FUNGSI DATABASE & AUTENTIKASI
-# (Tidak ada perubahan di bagian ini)
-# ==============================================================================
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_users_for_auth():
     """Mengambil data pengguna untuk streamlit-authenticator."""
     try:
@@ -356,7 +368,7 @@ def fetch_users_for_auth():
             conn.close()
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_user_details(username):
     """Mengambil role dan daftar proyek yang diakses oleh pengguna."""
     try:
@@ -390,8 +402,6 @@ def get_user_details(username):
 
 
 # 5. LOGIKA UTAMA APLIKASI
-# (Tidak ada perubahan di bagian ini)
-# ==============================================================================
 credentials = fetch_users_for_auth()
 authenticator = stauth.Authenticate(
     credentials,

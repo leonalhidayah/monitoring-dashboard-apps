@@ -4,22 +4,20 @@ from database.db_connection import get_engine
 
 # Impor "jantung" dari sistem kita
 from views.management.generic_editor_renderer import render_generic_editor
-from views.management.management_config import REGULAR_TABLE_CONFIGS
+from views.management.management_config import ADVERTISER_TABLE_CONFIGS
 
-# =============================================================================
-# ORKESTRATOR UTAMA APLIKASI DATA MANAGEMENT
-# =============================================================================
+project_name = "HPI"
 
-st.title("Regular Data Management System")
+st.title("Advertiser Data Management System")
 st.caption(
-    "Sistem terpusat untuk menambah, mengubah, dan menghapus data operasional regular."
+    "Sistem terpusat untuk menambah, mengubah, dan menghapus data operasional advertiser."
 )
 st.divider()
 
 st.markdown("#### Pilih Data")
 
 table_options = {
-    config["display_name"]: key for key, config in REGULAR_TABLE_CONFIGS.items()
+    config["display_name"]: key for key, config in ADVERTISER_TABLE_CONFIGS.items()
 }
 
 selected_display_name = st.selectbox(
@@ -37,9 +35,11 @@ try:
     engine = get_engine()
 
     if engine:
-        active_config = REGULAR_TABLE_CONFIGS[selected_table_key]
+        active_config = ADVERTISER_TABLE_CONFIGS[selected_table_key]
 
-        render_generic_editor(engine, config=active_config)
+        render_generic_editor(
+            engine, config=active_config, project_context=project_name
+        )
 
     else:
         st.error("Gagal terhubung ke database. Periksa koneksi Anda.")

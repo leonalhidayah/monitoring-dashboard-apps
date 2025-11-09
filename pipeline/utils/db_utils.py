@@ -5,6 +5,7 @@ import logging
 
 import pandas as pd
 import pandas.io.sql as pd_sql
+from psycopg2 import sql
 
 from database.db_connection import get_connection
 
@@ -159,28 +160,78 @@ def get_keys_for_batch(
                 cursor.execute(f"DROP TABLE IF EXISTS {temp_table}")
 
 
-# def load_fact_table(df: pd.DataFrame, table_name: str):
-#     """
-#     Melakukan bulk INSERT ke tabel fakta. Menggunakan metode COPY (tercepat).
-#     """
-#     if df.empty:
-#         print(f"Skipping load for {table_name}, DataFrame is empty.")
-#         return
+def select_from_db(
+    conn, table_name, columns="*", filters=None, limit=None, order_by=None
+):
+    """
+    Fungsi generik untuk melakukan SELECT dari PostgreSQL dengan filter dinamis dan aman.
 
-#     with get_connection() as conn:
-#         with conn.cursor() as cursor:
-#             try:
-#                 s_buf = io.StringIO()
-#                 df.to_csv(s_buf, index=False, header=False, sep="\t")
-#                 s_buf.seek(0)
+    Parameters:
+    ----------
+    conn : psycopg2.connection
+        Koneksi aktif ke database PostgreSQL.
+    table_name : str
+        Nama tabel yang ingin di-query.
+    columns : list[str] | str, optional
+        Daftar kolom yang ingin diambil. Default '*'.
+    filters : dict, optional
+        Filter dalam bentuk {kolom: nilai}, misal {"tim": "zyy x juw", "nama_produk": "Bycetin 20 Gr"}.
+    limit : int, optional
+        Batas jumlah data yang diambil.
+    order_by : str | tuple, optional
+        Kolom untuk pengurutan. Bisa string ('created_at DESC') atau tuple ('created_at', 'DESC').
 
-#                 # Gunakan COPY FROM STDIN
-#                 cursor.copy_expert(
-#                     f"COPY {table_name} ({', '.join(df.columns)}) FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t')",
-#                     s_buf,
-#                 )
-#                 conn.commit()
-#                 print(f"Bulk load successful for {table_name}.")
-#             except Exception as e:
-#                 conn.rollback()
-#                 raise Exception(f"Failed to bulk load {table_name}: {e}")
+    Returns:
+    --------
+    list[dict]
+        Daftar hasil query dalam bentuk dictionary.
+    """
+    try:
+        with conn.cursor() as cur:
+            # kolom yang akan diambil
+            if isinstance(columns, list):
+                col_clause = sql.SQL(", ").join(map(sql.Identifier, columns))
+            else:
+                col_clause = sql.SQL(columns)  # jika '*'
+
+            # query dasar
+            query = sql.SQL("SELECT {fields} FROM {table}").format(
+                fields=col_clause, table=sql.Identifier(table_name)
+            )
+
+            # WHERE
+            values = []
+            if filters:
+                conditions = []
+                for col, val in filters.items():
+                    conditions.append(sql.SQL("{} = %s").format(sql.Identifier(col)))
+                    values.append(val)
+                where_clause = sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
+                query += where_clause
+
+            # ORDER BY
+            if order_by:
+                if isinstance(order_by, tuple):
+                    query += sql.SQL(" ORDER BY {} {}").format(
+                        sql.Identifier(order_by[0]), sql.SQL(order_by[1])
+                    )
+                else:
+                    query += sql.SQL(" ORDER BY ") + sql.SQL(order_by)
+
+            # LIMIT
+            if limit:
+                query += sql.SQL(" LIMIT %s")
+                values.append(limit)
+
+            cur.execute(query, values)
+
+            # Ambil hasil dan ubah ke dict
+            colnames = [desc[0] for desc in cur.description]
+            rows = cur.fetchall()
+            results = [dict(zip(colnames, row)) for row in rows]
+
+            return results
+
+    except Exception as e:
+        print(f"[ERROR] Gagal mengeksekusi query: {e}")
+        return []
