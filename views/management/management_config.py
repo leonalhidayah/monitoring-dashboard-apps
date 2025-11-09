@@ -5,15 +5,6 @@ import streamlit as st
 
 from database.queries import dimmension_query as dim
 
-# from database.db_manager import (
-#     get_dim_cpas_accounts,
-#     get_dim_marketplaces,
-#     get_dim_platforms,
-#     get_dim_projects,
-#     get_dim_stores,
-#     get_dim_topup_account_regular,
-# )
-
 
 def get_yesterday_in_jakarta():
     tz = pytz.timezone("Asia/Jakarta")
@@ -23,17 +14,6 @@ def get_yesterday_in_jakarta():
 def get_now_in_jakarta():
     tz = pytz.timezone("Asia/Jakarta")
     return datetime.now(tz)
-
-
-# dim.get_nama_marketplace() = set(get_dim_marketplaces()["nama_marketplace"].tolist())
-# dim.get_nama_toko() = set(get_dim_stores()["nama_toko"].tolist())
-# PLARFORM_REGULAR = set(get_dim_platforms()["nama_platform"].tolist())
-# TOPUP_AKUN_REGULAR = set(get_dim_topup_account_regular()["nama_akun"].tolist())
-# AKUN_CPAS_LIST = set(get_dim_cpas_accounts()["nama_akun_cpas"].tolist())
-# STORE_WITH_CPAS_LIST = set(get_dim_cpas_accounts()["nama_toko"].tolist())
-# PROJECT_LIST = set(get_dim_projects()["project_name"].tolist())
-# TIPE_BEBAN_LIST = set(get_tipe_beban()["tipe_beban"].tolist())
-# BIDANG_LIST = set(get_bidang()["bidang"].tolist())
 
 
 # =============================================================================
@@ -156,6 +136,7 @@ FINANCE_TABLE_CONFIGS = {
                 "column_name": "tanggal",
                 "filter_type": "date_range",
                 "label": "Pilih Rentang Tanggal",
+                "date_range_type": "yesterday",
             },
             {
                 "column_name": "platform",
@@ -624,6 +605,7 @@ ADVERTISER_TABLE_CONFIGS = {
                 "column_name": "tanggal",
                 "filter_type": "date_range",
                 "label": "Pilih Rentang Tanggal",
+                "date_range_type": "yesterday",
             },
             {
                 "column_name": "project_name",
@@ -718,6 +700,7 @@ ADVERTISER_TABLE_CONFIGS = {
                 "column_name": "tanggal",
                 "filter_type": "date_range",
                 "label": "Pilih Rentang Tanggal",
+                "date_range_type": "yesterday",
             },
             {
                 "column_name": "project_name",
@@ -794,109 +777,6 @@ ADVERTISER_TABLE_CONFIGS = {
 
 
 REGULAR_TABLE_CONFIGS = {
-    "advertiser_cs_regular": {
-        "display_name": "Advertiser & CS Regular",
-        "source_view": "vw_advertiser_cs_regular_with_tim",
-        "target_table": "advertiser_cs_regular",
-        "primary_keys": ["performance_date", "product_name"],
-        "filters": [
-            {
-                "column_name": "performance_date",
-                "filter_type": "date_range",
-                "label": "Pilih Rentang Tanggal",
-                "date_range_type": "yesterday",
-            },
-            {
-                "column_name": "product_name",
-                "filter_type": "selectbox",
-                "label": "Pilih Produk",
-                "options_source": {
-                    "table": "advertiser_cs_regular",
-                    "column": "product_name",
-                },
-            },
-            {
-                "column_name": "channel",
-                "filter_type": "selectbox",
-                "label": "Pilih Channel",
-                "options_source": {
-                    "table": "advertiser_cs_regular",
-                    "column": "channel",
-                },
-            },
-            {
-                "column_name": "tim",
-                "filter_type": "selectbox",
-                "label": "Pilih Tim",
-                "options_source": {
-                    "table": "dim_reg_products",
-                    "column": "tim",
-                },
-            },
-        ],
-        "column_order": [
-            "performance_date",
-            "product_name",
-            "channel",
-            "spend",
-            "reach",
-            "leads_generated",
-            "leads_received",
-            "deals_closed",
-            "gross_revenue",
-        ],
-        "column_config": {
-            "performance_date": st.column_config.DateColumn(
-                "Tanggal",
-                format="YYYY-MM-DD",
-                required=True,
-                default=get_yesterday_in_jakarta(),
-            ),
-            "product_name": st.column_config.SelectboxColumn(
-                "Nama Produk",
-                options=["RETURN", "CANCEL"],
-                required=True,
-            ),
-            "channel": st.column_config.SelectboxColumn(
-                "Channel",
-                options=["Order Online", "CTWA"],
-                required=True,
-            ),
-            "spend": st.column_config.NumberColumn(
-                "Spend (Rp)",
-                min_value=0,
-                format="accounting",
-                required=True,
-            ),
-            "reach": st.column_config.NumberColumn(
-                "Reach",
-                min_value=0,
-                format="localized",
-                required=True,
-            ),
-            "leads_generated": st.column_config.NumberColumn(
-                "Leads (Iklan)",
-                min_value=0,
-                format="localized",
-                required=True,
-            ),
-            "leads_received": st.column_config.NumberColumn(
-                "Leads (CS)",
-                min_value=0,
-                format="localized",
-            ),
-            "deals_closed": st.column_config.NumberColumn(
-                "Closing",
-                min_value=0,
-                format="localized",
-            ),
-            "gross_revenue": st.column_config.NumberColumn(
-                "Gross Revenue (Rp)",
-                min_value=0,
-                format="accounting",
-            ),
-        },
-    },
     "order_flag_reg": {
         "display_name": "Order Flag Regular",
         "table_name": "order_flag_reg",
