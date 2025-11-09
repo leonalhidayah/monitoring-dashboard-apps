@@ -36,7 +36,7 @@ with col1:
     all_project = sorted(project_list)
     options = ["Semua Project"] + all_project
     selected_in_widget = st.multiselect(
-        "Pilih Project", options=options, key="select_product", default="Semua Project"
+        "Pilih Project", options=options, key="select_product", default="Zhi Yang Yao"
     )
 
     if "Semua Project" in selected_in_widget:
@@ -305,7 +305,7 @@ if selected_projects:
         # --- LOGIKA BARU UNTUK BUDGET ADS (MULTI-PROJECT) ---
         st.subheader("Detail Data Monitoring Budget Ads")
 
-        df_ratios = get_mart_marketing_ads_ratio(  # <-- PANGGIL FUNGSI MART
+        df_ratios = get_mart_marketing_ads_ratio(
             engine, selected_projects, start_date, end_date
         )
 
@@ -334,7 +334,6 @@ if selected_projects:
             "Normal",
         )
 
-        # --- (Sisa kode Gauge Chart dan Tabel Detail tetap sama) ---
         total_budget = df_ads_detail["budget_ads"].sum()
 
         if total_budget > 0:
