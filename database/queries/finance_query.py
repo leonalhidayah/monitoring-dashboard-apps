@@ -7,12 +7,7 @@ import streamlit as st
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
-# (Asumsi Anda punya fungsi get_engine() dan get_nama_project() di file lain)
-# from database.db_connection import get_engine
-# from database.queries.dimmension_query import get_nama_project
 
-
-# --- FUNGSI MART BARU UNTUK BUDGET PLAN ---
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_mart_budget_plan(
     _engine: Engine, project_names: list[str], start_date: date, end_date: date
@@ -37,7 +32,11 @@ def get_mart_budget_plan(
             mart_finance_budget_plan
         WHERE 
             project_name IN :project_names
-            AND "report_date" BETWEEN :start_date AND :end_date
+            AND "report_date" BETWEEN DATE_TRUNC('month', :start_date ::date) 
+                        AND DATE_TRUNC('month', :end_date ::date)
+        ORDER BY
+            project_name,
+            parameter_name;
     """
     try:
         params = {
@@ -81,10 +80,12 @@ def get_mart_monitoring_cashflow(
         FROM mart_monitoring_cashflow
         WHERE 
             "Project" IN :project_names
-            AND "report_date" BETWEEN :start_date AND :end_date
+            AND "report_date" BETWEEN DATE_TRUNC('month', :start_date ::date) 
+                        AND DATE_TRUNC('month', :end_date ::date)
         ORDER BY
             "Tahun", 
-            TO_DATE("Bulan", 'FMMonth');
+            TO_DATE("Bulan", 'FMMonth'),
+            "Parameter Budget";
     """
     try:
         params = {
@@ -168,7 +169,8 @@ def get_mart_marketing_ads_ratio(
         WHERE 
             "Project" IN :project_names
             AND "Parameter Budget" = 'Biaya Marketing (Ads)'
-            AND "report_date" BETWEEN :start_date AND :end_date
+            AND "report_date" BETWEEN DATE_TRUNC('month', :start_date ::date) 
+                        AND DATE_TRUNC('month', :end_date ::date)
     """
     try:
         params = {

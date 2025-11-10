@@ -109,7 +109,7 @@ if selected_projects:
         pd.date_range(
             start_date,
             end_date,
-            freq="MS",  # 'MS' = Month Start
+            freq="D",  # 'MS' = Month Start
         )
         .strftime("%B")
         .unique()
