@@ -32,8 +32,8 @@ def get_mart_budget_plan(
             mart_finance_budget_plan
         WHERE 
             project_name IN :project_names
-            AND "report_date" BETWEEN DATE_TRUNC('month', :start_date ::date) 
-                        AND DATE_TRUNC('month', :end_date ::date)
+            AND "start_of_quarter_date" BETWEEN DATE_TRUNC('quarter', :start_date ::date) 
+                                        AND DATE_TRUNC('quarter', :end_date ::date)
         ORDER BY
             project_name,
             parameter_name;
