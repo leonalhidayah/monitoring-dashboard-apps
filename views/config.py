@@ -74,7 +74,7 @@ DATA_MAP_FINANCE = {
             "SP enzhico indonesia",
             "SP enzhico authorize store",
             "SP enzhico official store",
-            "TT enzhico authorized store",
+            "TT enzhico official store",
             "LZ enzhico",
             "LZ enzhico store",
             "TP enzhico official store",
@@ -174,7 +174,7 @@ ADV_MP_MAP_PROJECT = {
             "SP enzhico official store",
             "SP enzhico store",
             "SP enzhico shop",
-            "TT enzhico authorized store",
+            "TT enzhico official store",
             "LZ enzhico",
             "LZ enzhico store",
         ],
@@ -254,8 +254,8 @@ ADV_CPAS_MAP_PROJECT = {
     "Enzhico": {
         "Nama Toko": [
             "SP enzhico official store",
-            "TT enzhico authorized store",
-            "TT enzhico authorized store",
+            "TT enzhico official store",
+            "TT enzhico official store",
         ],
         "Akun": [
             "Enzhico CPAS 1",
