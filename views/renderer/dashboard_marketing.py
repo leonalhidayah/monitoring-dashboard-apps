@@ -393,22 +393,39 @@ def display_marketing_dashboard(project_id: int, project_name: str):
     Fungsi Utama Dashboard Marketing.
     Menggabungkan 3 level pandangan: Strategic (MTD), Tactical (H-1), dan Analytical (Filter).
     """
-    st.title(f"📊 Dashboard Marketing: {project_name}")
 
     # --- SETUP WAKTU DEFAULT ---
     today = date.today()
     start_of_month = today.replace(day=1)
 
-    # --- GLOBAL FILTER (Hanya untuk Chart & Tabel) ---
-    # Taruh di atas atau sidebar agar jelas ini input user
-    with st.container():
-        col_space, col_filter = st.columns([2, 1])
-        with col_filter:
-            date_range = st.date_input(
-                "Filter Tanggal (Untuk Grafik & Tabel):",
-                value=(start_of_month, get_yesterday_in_jakarta()),
-                key=f"date_filter_{project_name}",
-            )
+    # st.title(f"📊 Dashboard Marketing: {project_name}")
+
+    # # --- GLOBAL FILTER (Hanya untuk Chart & Tabel) ---
+    # # Taruh di atas atau sidebar agar jelas ini input user
+    # with st.container():
+    #     col_space, col_filter = st.columns([2, 1])
+    #     with col_filter:
+    #         date_range = st.date_input(
+    #             "Filter Tanggal (Untuk Grafik & Tabel):",
+    #             value=(start_of_month, get_yesterday_in_jakarta()),
+    #             key=f"date_filter_{project_name}",
+    #         )
+
+    col_header, col_filter = st.columns(
+        [3, 1], gap="medium", vertical_alignment="bottom"
+    )
+
+    with col_header:
+        # Judul sekarang di dalam kolom kiri
+        st.title(f"📊 Dashboard Marketing: {project_name}")
+
+    with col_filter:
+        # Filter sekarang di dalam kolom kanan
+        date_range = st.date_input(
+            "Filter Tanggal (Untuk Grafik & Tabel):",
+            value=(start_of_month, get_yesterday_in_jakarta()),
+            key=f"date_filter_{project_name}",
+        )
 
     # Validasi Range
     if not (isinstance(date_range, tuple) and len(date_range) == 2):
