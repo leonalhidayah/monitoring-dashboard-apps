@@ -379,6 +379,7 @@ def get_map_project_stores():
     return get_table_data(table_name="map_project_stores ")
 
 
+@st.cache_data(ttl=3600)
 def get_total_sales_target(project_id: int, start_date: str, end_date: str):
     """
     Menghitung total TARGET OMSET untuk sebuah project dalam rentang tanggal.
@@ -1831,6 +1832,7 @@ def update_table(table_name, data_list, pk_cols):
     conn.close()
 
 
+@st.cache_data(ttl=300)
 def get_budget_ads_summary_by_project(project_name, start_date=None, end_date=None):
     """
     Mengambil data summary budget ads dari view vw_budget_ads_summary.

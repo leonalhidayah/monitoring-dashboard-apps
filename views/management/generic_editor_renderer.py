@@ -80,7 +80,7 @@ def render_generic_editor(engine, config: dict, project_context: str = None):
                                 engine,
                                 src["table"],
                                 src["column"],
-                                project_context=context_to_pass,  # <-- MODIFIKASI
+                                project_context=context_to_pass,
                             )
                             options += db_opts
 
@@ -175,6 +175,24 @@ def render_generic_editor(engine, config: dict, project_context: str = None):
             )
         except Exception as e:
             logging.warning(f"Gagal memuat opsi dinamis 'nama_toko': {e}")
+            pass
+
+    if project_context and "product_name" in dynamic_column_config:
+        try:
+            product_list_for_project = fetch_distinct_options(
+                _engine=engine,
+                table_name="dim_reg_products",  # <-- Dari config
+                column_name="nama_produk",  # <-- Dari config
+                project_context=project_context,  # <-- Teruskan konteks (bisa str/list)
+            )
+
+            dynamic_column_config["product_name"] = st.column_config.SelectboxColumn(
+                "Nama Produk",
+                options=product_list_for_project,  # <-- SUNTIKKAN OPSI
+                required=True,
+            )
+        except Exception as e:
+            logging.warning(f"Gagal memuat opsi dinamis 'product_name': {e}")
             pass
 
     edited_df = st.data_editor(

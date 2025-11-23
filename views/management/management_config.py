@@ -828,3 +828,98 @@ REGULAR_TABLE_CONFIGS = {
         },
     },
 }
+
+ADV_CS_REGULAR_TABLE_CONFIGS = {
+    "advertiser_cs_regular": {
+        "display_name": "Advertiser CS Regular",
+        "source_view": "vw_adv_reg",
+        "target_table": "advertiser_cs_regular",
+        "primary_keys": ["performance_date", "product_name"],
+        "filters": [
+            {
+                "column_name": "performance_date",
+                "filter_type": "date_range",
+                "label": "Pilih Rentang Tanggal",
+                "date_range_type": "yesterday",
+            },
+            {
+                "column_name": "product_name",
+                "filter_type": "selectbox",
+                "label": "Pilih Produk",
+                "options_source": {
+                    "table": "dim_reg_products",
+                    "column": "nama_produk",
+                    "needs_project_context": True,
+                },
+            },
+            {
+                "column_name": "channel",
+                "filter_type": "selectbox",
+                "label": "Pilih Channel",
+                "options_source": {
+                    "table": "advertiser_cs_regular",
+                    "column": "channel",
+                },
+            },
+        ],
+        "column_order": [
+            "performance_date",
+            "product_name",
+            "channel",
+            "spend",
+            "reach",
+            "leads_generated",
+            "leads_received",
+            "deals_closed",
+            "gross_revenue",
+        ],
+        "column_config": {
+            "performance_date": st.column_config.DateColumn(
+                "Tanggal",
+                format="YYYY-MM-DD",
+                required=True,
+                default=get_now_in_jakarta(),
+            ),
+            "product_name": st.column_config.SelectboxColumn(
+                "Nama Produk",
+                options=[],
+                required=True,
+            ),
+            "channel": st.column_config.SelectboxColumn(
+                "Channel",
+                options=["CTWA", "Order Online"],
+                required=True,
+            ),
+            "spend": st.column_config.NumberColumn(
+                "Spend (Rp)",
+                min_value=0,
+                format="accounting",
+            ),
+            "reach": st.column_config.NumberColumn(
+                "Reach",
+                min_value=0,
+                format="localized",
+            ),
+            "leads_generated": st.column_config.NumberColumn(
+                "Leads (dari iklan)",
+                min_value=0,
+                format="localized",
+            ),
+            "leads_received": st.column_config.NumberColumn(
+                "Leads Diterima (CS)",
+                min_value=0,
+                format="localized",
+            ),
+            "deals_closed": st.column_config.NumberColumn(
+                "Closing",
+                min_value=0,
+                format="localized",
+            ),
+            "gross_revenue": st.column_config.NumberColumn(
+                "Gross Revenue (Rp)",
+                min_value=0,
+                format="accounting",
+            ),
+        },
+    },
+}

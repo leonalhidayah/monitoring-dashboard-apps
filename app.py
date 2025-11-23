@@ -49,12 +49,22 @@ admin_pages = {
 regular_pages = {
     "entry_zyy_juw": st.Page(
         "views/regular/zyy_juw_regular.py",
-        title="Entry ZYY x Juw",
+        title="Entry ZYY x JUW",
+        icon=":material/campaign:",
+    ),
+    "zyy_juw_data_management": st.Page(
+        "views/regular/zyy_juw_data_management.py",
+        title="Data Management ZYY x JUW",
         icon=":material/campaign:",
     ),
     "entry_enz_kdk": st.Page(
         "views/regular/enz_kdk_regular.py",
         title="Entry ENZ x KDK",
+        icon=":material/campaign:",
+    ),
+    "enz_kdk_data_management": st.Page(
+        "views/regular/enz_kdk_data_management.py",
+        title="Data Management ENZ x KDK",
         icon=":material/campaign:",
     ),
     "return": st.Page(
@@ -68,8 +78,8 @@ regular_pages = {
         icon=":material/dashboard:",
     ),
     "dashboard_budget": st.Page(
-        "views/regular/dashboard_budgeting_reg.py",
-        title="Dashboard Budgeting",
+        "views/regular/dashboard_marketing_reg.py",
+        title="Dashboard Marketing",
         icon=":material/dashboard:",
     ),
 }
@@ -88,8 +98,8 @@ PROJECT_PAGE_MAP = {
             icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
-            "views/dashboard/project_zyy/dashboard_budgeting_zyy.py",
-            title="Dashboard Budgeting",
+            "views/dashboard/project_zyy/dashboard_marketing_zyy.py",
+            title="Dashboard Marketing",
             icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
@@ -115,8 +125,8 @@ PROJECT_PAGE_MAP = {
             icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
-            "views/dashboard/project_juw/dashboard_budgeting_juw.py",
-            title="Dashboard Budgeting",
+            "views/dashboard/project_juw/dashboard_marketing_juw.py",
+            title="Dashboard Marketing",
             icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
@@ -142,8 +152,8 @@ PROJECT_PAGE_MAP = {
             icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
-            "views/dashboard/project_enz/dashboard_budgeting_enz.py",
-            title="Dashboard Budgeting",
+            "views/dashboard/project_enz/dashboard_marketing_enz.py",
+            title="Dashboard Marketing",
             icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
@@ -169,8 +179,8 @@ PROJECT_PAGE_MAP = {
             icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
-            "views/dashboard/project_kdk/dashboard_budgeting_kdk.py",
-            title="Dashboard Budgeting",
+            "views/dashboard/project_kdk/dashboard_marketing_kdk.py",
+            title="Dashboard Marketing",
             icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
@@ -196,8 +206,8 @@ PROJECT_PAGE_MAP = {
             icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
-            "views/dashboard/project_era/dashboard_budgeting_era.py",
-            title="Dashboard Budgeting",
+            "views/dashboard/project_era/dashboard_marketing_era.py",
+            title="Dashboard Marketing",
             icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
@@ -223,8 +233,8 @@ PROJECT_PAGE_MAP = {
             icon=":material/campaign:",
         ),
         "dash_budget": st.Page(
-            "views/dashboard/project_hpi/dashboard_budgeting_hpi.py",
-            title="Dashboard Budgeting",
+            "views/dashboard/project_hpi/dashboard_marketing_hpi.py",
+            title="Dashboard Marketing",
             icon=":material/money_bag:",
         ),
         "dash_adv": st.Page(
@@ -250,6 +260,8 @@ def build_navigation_for_role(role, project_names=[]):
         pages["Menu Regular"] = [
             regular_pages["entry_zyy_juw"],
             regular_pages["entry_enz_kdk"],
+            regular_pages["zyy_juw_data_management"],
+            regular_pages["enz_kdk_data_management"],
             regular_pages["dashboard"],
         ]
         return pages

@@ -1,3 +1,4 @@
+import calendar
 import time
 from datetime import date, datetime
 
@@ -1193,12 +1194,51 @@ def style_ads_dataframe(df):
 # --- FUNGSI MODULAR (PECAHAN DARI FUNGSI UTAMA) ---
 
 
+# def display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir):
+#     """Menampilkan bagian ringkasan performa omset."""
+#     st.header("Ringkasan Performa Omset")
+
+#     # Ambil data (akan menggunakan cache jika filter sama)
+#     total_target_omset = get_total_sales_target(project_id, tgl_awal, tgl_akhir)
+#     df_raw = get_budget_ads_summary_by_project(
+#         project_name=project_name,
+#         start_date=tgl_awal,
+#         end_date=tgl_akhir,
+#     )
+
+#     total_omset_aktual = 0
+#     if not df_raw.empty:
+#         total_omset_aktual = df_raw["akrual_basis"].sum()
+
+#     pencapaian_persen = (
+#         (float(total_omset_aktual) / float(total_target_omset) * 100)
+#         if total_target_omset > 0
+#         else 0
+#     )
+
+#     col1, col2, col3 = st.columns(3)
+#     col1.metric("Omset Aktual (Akrual)", format_rupiah(total_omset_aktual), border=True)
+#     col2.metric(
+#         "Target Omset", format_rupiah(round(total_target_omset, -1)), border=True
+#     )
+#     col3.metric("Pencapaian Target", f"{pencapaian_persen:.2f} %", border=True)
+
+#     # ideal_omset = total_target_omset /
+
+
 def display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir):
     """Menampilkan bagian ringkasan performa omset."""
     st.header("Ringkasan Performa Omset")
 
-    # Ambil data (akan menggunakan cache jika filter sama)
-    total_target_omset = get_total_sales_target(project_id, tgl_awal, tgl_akhir)
+    tahun_konteks, bulan_konteks = tgl_akhir.year, tgl_akhir.month
+    tgl_awal_bulan = tgl_akhir.replace(day=1)
+    _, akhir_hari = calendar.monthrange(tahun_konteks, bulan_konteks)
+    tgl_akhir_bulan = tgl_akhir.replace(day=akhir_hari)
+
+    total_target_omset = get_total_sales_target(
+        project_id, tgl_awal_bulan, tgl_akhir_bulan
+    )
+
     df_raw = get_budget_ads_summary_by_project(
         project_name=project_name,
         start_date=tgl_awal,
@@ -1215,12 +1255,73 @@ def display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir):
         else 0
     )
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Omset Aktual (Akrual)", format_rupiah(total_omset_aktual), border=True)
-    col2.metric(
-        "Target Omset", format_rupiah(round(total_target_omset, -1)), border=True
+    if isinstance(tgl_akhir, datetime):
+        tgl_akhir = tgl_akhir.date()
+
+    tahun = tgl_akhir.year
+    bulan = tgl_akhir.month
+
+    _, total_hari_di_bulan = calendar.monthrange(tahun, bulan)
+    total_hari = total_hari_di_bulan
+
+    ideal_daily_omset = 0
+    if total_hari > 0:
+        ideal_daily_omset = total_target_omset / total_hari
+
+    hari_berjalan_raw = tgl_akhir.day
+
+    hari_berjalan = max(0, min(hari_berjalan_raw, total_hari))
+
+    ideal_omset_until_today = ideal_daily_omset * hari_berjalan
+
+    persentase_ideal = 0
+    if total_hari > 0:
+        persentase_ideal = (hari_berjalan / total_hari) * 100
+
+    col1, col2, col3, col4, col5 = st.columns([1.5, 2, 1, 1, 1])
+
+    col1.metric(
+        "Omset Aktual (Akrual)",
+        format_rupiah(total_omset_aktual),
+        border=True,
+        help="Pendapatan omset aktual dari penarikan data omset pada setiap dashboard toko oleh finance",
     )
-    col3.metric("Pencapaian Target", f"{pencapaian_persen:.2f} %", border=True)
+    col2.metric(
+        "Target Omset (Bulanan)",
+        format_rupiah(round(total_target_omset, -1)),
+        border=True,
+        help="Target omset yang ditetapkan oleh management",
+    )
+    col3.metric(
+        "Pencapaian Aktual",
+        f"{pencapaian_persen:.2f} %",
+        border=True,
+        help="""Pencapaian aktual target yang didapatkan oleh tim.  
+        Persentase ini digunakan sebagai acuan bonus kuartal tim""",
+    )
+
+    help_text = (
+        f"**Pencapaian Ideal Periode Ini**\n\n"
+        f"- Menggunakan progres *linear* selama 1 bulan.\n"
+        f"- Hari ke-**{hari_berjalan}** dari total **{total_hari}** hari.\n"
+        f"- Idealnya, hingga tanggal **{tgl_akhir.day}**, omset seharusnya mencapai:\n"
+        f"  **{format_rupiah(ideal_omset_until_today)}**.\n\n"
+        f"Gunakan angka ini untuk membandingkan omset aktual terhadap target progres bulan berjalan."
+    )
+
+    col4.metric(
+        "Pencapaian Ideal",
+        f"{persentase_ideal:.2f} %",
+        help=help_text,
+        border=True,
+    )
+
+    gap = pencapaian_persen - persentase_ideal
+    col5.metric(
+        "Gap",
+        f"{gap:.2f} %",
+        border=True,
+    )
 
 
 def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
@@ -1231,7 +1332,7 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
     df_ads = get_vw_ads_performance_summary(project_name, tgl_awal, tgl_akhir)
     if df_ads.empty:
         st.info("Tidak ada data performa iklan yang ditemukan untuk periode ini.")
-        return  # Keluar dari fungsi jika tidak ada data
+        return
 
     # Ambil Target Rasio
     year = tgl_akhir.year
@@ -1242,7 +1343,7 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
         st.warning(
             f"Target rasio untuk Q{quarter} {year} belum diatur. Analisis iklan tidak dapat dilanjutkan."
         )
-        return  # Keluar dari fungsi
+        return
 
     # Kalkulasi metrik keseluruhan
     total_spending_ads = df_ads["total_spending"].sum()
@@ -1251,8 +1352,7 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
         (total_spending_ads / total_omset_ads * 100) if total_omset_ads > 0 else 0
     )
 
-    # Tentukan zona aman dan status (logika ini hanya perlu sekali)
-    safe_zone_start = target_rasio - 5  # Asumsi 5% adalah buffer
+    safe_zone_start = target_rasio - 5
 
     if rasio_ads_overall < safe_zone_start:
         status_text = "Under"
@@ -1293,12 +1393,20 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
     st.divider()
 
     # --- 2. Metrik Iklan ---
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3, col4, col5 = st.columns([1.5, 1.5, 1, 1, 1])
     col1.metric("Total Ad Spend", format_rupiah(total_spending_ads), border=True)
     col2.metric(
-        "Omset Berjalan (Total Pesanan)", format_rupiah(total_omset_ads), border=True
+        "Omset Berjalan (Total Pesanan)",
+        format_rupiah(total_omset_ads),
+        border=True,
+        help="Pendapatan estimasi omset berjalan dari data pesanan",
     )
     col3.metric("Rasio Ads/Omset", f"{rasio_ads_overall:.2f} %", border=True)
+    col4.metric("Target", f"{target_rasio:.2f} %", border=True)
+
+    gap = target_rasio - rasio_ads_overall
+
+    col5.metric("Gap", f"{gap:.2f} %", border=True)
 
     st.divider()
 
@@ -1369,12 +1477,12 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
         st.dataframe(styled_df_detailed, width="stretch")
 
 
-def display_budgeting_dashboard(project_id: int, project_name: str):
+def display_marketing_dashboard(project_id: int, project_name: str):
     """
     Menampilkan dashboard finansial lengkap dengan gauge chart dinamis.
     (Versi modular dan optimal)
     """
-    st.title(f"📊 Dashboard Finansial: {project_name}")
+    st.title(f"📊 Dashboard Marketing: {project_name}")
 
     st.divider()
     col_header, col_filter = st.columns([2, 1])

@@ -1,5 +1,6 @@
 import logging
 
+import numpy as np
 import pandera.dtypes as pa_dtypes
 import pandera.pandas as pa
 
@@ -75,6 +76,15 @@ def standardize_silver_data(df):
     df["Diskon Ongkos Kirim Marketplace"] = fix_misconverted_currency(
         df["Diskon Ongkos Kirim Marketplace"]
     )
+
+    target_cols_zero_to_nan = [
+        "Total Pesanan",
+        "Subtotal Produk",
+    ]  # Tambahkan kolom lain jika ada logic serupa
+
+    for col in target_cols_zero_to_nan:
+        if col in df.columns:
+            df[col] = df[col].replace(0, np.nan)
 
     df = fillna_currency_with_rules(df)
     df = fillna_currency_with_rules(df, fill_col="Subtotal Produk")

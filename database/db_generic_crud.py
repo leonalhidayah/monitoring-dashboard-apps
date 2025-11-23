@@ -160,7 +160,7 @@ def fetch_filtered_data(
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_distinct_options(
     _engine: Engine,
     table_name: str,
@@ -195,6 +195,16 @@ def fetch_distinct_options(
             ORDER BY 1
         """
         params["project_name"] = project_context
+        query = text(query_str)
+
+    elif project_context and table_name == "dim_reg_products":
+        query_str = f"""
+            SELECT DISTINCT tn."{column_name}" 
+            FROM {table_name} tn
+            WHERE tn.tim = :tim
+            ORDER BY 1
+        """
+        params["tim"] = project_context
         query = text(query_str)
 
     else:
