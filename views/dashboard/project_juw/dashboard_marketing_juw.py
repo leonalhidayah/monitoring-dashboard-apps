@@ -1,6 +1,6 @@
 import streamlit as st
 
-from views.render_pages import display_marketing_dashboard
+from views.renderer.dashboard_marketing import display_marketing_dashboard
 
 st.set_page_config(layout="wide")
 

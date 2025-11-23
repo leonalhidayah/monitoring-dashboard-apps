@@ -1,6 +1,6 @@
 import calendar
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -1191,41 +1191,6 @@ def style_ads_dataframe(df):
     )
 
 
-# --- FUNGSI MODULAR (PECAHAN DARI FUNGSI UTAMA) ---
-
-
-# def display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir):
-#     """Menampilkan bagian ringkasan performa omset."""
-#     st.header("Ringkasan Performa Omset")
-
-#     # Ambil data (akan menggunakan cache jika filter sama)
-#     total_target_omset = get_total_sales_target(project_id, tgl_awal, tgl_akhir)
-#     df_raw = get_budget_ads_summary_by_project(
-#         project_name=project_name,
-#         start_date=tgl_awal,
-#         end_date=tgl_akhir,
-#     )
-
-#     total_omset_aktual = 0
-#     if not df_raw.empty:
-#         total_omset_aktual = df_raw["akrual_basis"].sum()
-
-#     pencapaian_persen = (
-#         (float(total_omset_aktual) / float(total_target_omset) * 100)
-#         if total_target_omset > 0
-#         else 0
-#     )
-
-#     col1, col2, col3 = st.columns(3)
-#     col1.metric("Omset Aktual (Akrual)", format_rupiah(total_omset_aktual), border=True)
-#     col2.metric(
-#         "Target Omset", format_rupiah(round(total_target_omset, -1)), border=True
-#     )
-#     col3.metric("Pencapaian Target", f"{pencapaian_persen:.2f} %", border=True)
-
-#     # ideal_omset = total_target_omset /
-
-
 def display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir):
     """Menampilkan bagian ringkasan performa omset."""
     st.header("Ringkasan Performa Omset")
@@ -1325,10 +1290,12 @@ def display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir):
 
 
 def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
-    """Menampilkan seluruh bagian analisis performa iklan."""
+    """Menampilkan analisis performa iklan dengan Delta Comparison & Background Color Gap."""
     st.header("Analisis Performa Iklan")
 
-    # Ambil data Iklan
+    # ==========================================
+    # 1. AMBIL DATA CURRENT (Periode Saat Ini)
+    # ==========================================
     df_ads = get_vw_ads_performance_summary(project_name, tgl_awal, tgl_akhir)
     if df_ads.empty:
         st.info("Tidak ada data performa iklan yang ditemukan untuk periode ini.")
@@ -1340,82 +1307,196 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
     target_rasio = get_target_ads_ratio(project_id, year, quarter)
 
     if target_rasio is None or target_rasio == 0:
-        st.warning(
-            f"Target rasio untuk Q{quarter} {year} belum diatur. Analisis iklan tidak dapat dilanjutkan."
-        )
+        st.warning(f"Target rasio untuk Q{quarter} {year} belum diatur.")
         return
 
-    # Kalkulasi metrik keseluruhan
+    # Kalkulasi Metrik Current
     total_spending_ads = df_ads["total_spending"].sum()
     total_omset_ads = df_ads["total_omset"].sum()
+
     rasio_ads_overall = (
         (total_spending_ads / total_omset_ads * 100) if total_omset_ads > 0 else 0
     )
 
-    safe_zone_start = target_rasio - 5
+    # ==========================================
+    # 2. AMBIL DATA PREVIOUS (Untuk Delta)
+    # ==========================================
+    # Logika:
+    # - Jika range 1 hari: Bandingkan dengan 1 hari sebelumnya (Kemarin).
+    # - Jika range n hari: Bandingkan dengan n hari sebelumnya (Periode lalu).
 
-    if rasio_ads_overall < safe_zone_start:
-        status_text = "Under"
-        bar_color = "tomato"
-    elif safe_zone_start <= rasio_ads_overall <= target_rasio:
-        status_text = "Normal"
-        bar_color = "green"
-    else:
-        status_text = "Over"
-        bar_color = "tomato"
+    durasi_hari = (tgl_akhir - tgl_awal).days
 
-    # --- 1. Gauge Chart ---
-    fig_gauge = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=rasio_ads_overall,
-            number={"suffix": "%", "font": {"size": 40}},
-            title={
-                "text": f"Target: {target_rasio:.2f}%, Status: {status_text}",
-                "font": {"size": 20},
-            },
-            gauge={
-                "axis": {"range": [0, target_rasio * 2]},
-                "bar": {"color": bar_color},
-                "steps": [
-                    {"range": [safe_zone_start, target_rasio], "color": "lightgreen"},
-                ],
-                "threshold": {
-                    "line": {"color": "black", "width": 4},
-                    "value": target_rasio,
-                },
-            },
+    # Hitung tanggal mundur
+    tgl_akhir_prev = tgl_awal - timedelta(days=1)
+    tgl_awal_prev = tgl_akhir_prev - timedelta(days=durasi_hari)
+
+    # Ambil data previous
+    df_ads_prev = get_vw_ads_performance_summary(
+        project_name, tgl_awal_prev, tgl_akhir_prev
+    )
+
+    # Kalkulasi Metrik Previous (Default 0 jika kosong)
+    total_spending_prev = 0
+    total_omset_prev = 0
+    rasio_ads_prev = 0
+
+    if not df_ads_prev.empty:
+        total_spending_prev = df_ads_prev["total_spending"].sum()
+        total_omset_prev = df_ads_prev["total_omset"].sum()
+        rasio_ads_prev = (
+            (total_spending_prev / total_omset_prev * 100)
+            if total_omset_prev > 0
+            else 0
         )
+
+    # Hitung Selisih (Delta)
+    delta_spending = (
+        (total_spending_ads - total_spending_prev) * 100 / total_spending_prev
     )
-    fig_gauge.update_layout(height=250, margin=dict(l=20, r=20, t=60, b=20))
-    st.plotly_chart(fig_gauge, use_container_width=True)
+    delta_omset = (total_omset_ads - total_omset_prev) * 100 / total_omset_prev
+    delta_rasio = rasio_ads_overall - rasio_ads_prev
 
-    st.divider()
+    # ==========================================
+    # 3. LOGIKA WARNA & STATUS (Gap Logic)
+    # ==========================================
 
-    # --- 2. Metrik Iklan ---
-    col1, col2, col3, col4, col5 = st.columns([1.5, 1.5, 1, 1, 1])
-    col1.metric("Total Ad Spend", format_rupiah(total_spending_ads), border=True)
-    col2.metric(
-        "Omset Berjalan (Total Pesanan)",
-        format_rupiah(total_omset_ads),
-        border=True,
-        help="Pendapatan estimasi omset berjalan dari data pesanan",
-    )
-    col3.metric("Rasio Ads/Omset", f"{rasio_ads_overall:.2f} %", border=True)
-    col4.metric("Target", f"{target_rasio:.2f} %", border=True)
-
+    # Gap = Target - Rasio
     gap = target_rasio - rasio_ads_overall
 
-    col5.metric("Gap", f"{gap:.2f} %", border=True)
+    # Aturan Status:
+    if rasio_ads_overall > target_rasio:
+        # Kondisi 1: Over Budget -> Merah
+        indicator_color = "#ff2b2b"
+        status_desc = "Boros (Melebihi Target)"
+    elif gap > 5:
+        # Kondisi 2: Underspending > 5% -> Merah
+        indicator_color = "#ff2b2b"
+        status_desc = "Terlalu Irit (Gap > 5%)"
+    else:
+        # Kondisi 3: Ideal -> Hijau
+        indicator_color = "#09ab3b"
+        status_desc = "Ideal (Gap ≤ 5%)"
+
+    # Safe zone variable (hanya untuk referensi internal jika dibutuhkan)
+    safe_zone_start = max(0, target_rasio - 5)
+
+    # ==========================================
+    # 4. TAMPILKAN METRIK UTAMA
+    # ==========================================
+
+    # Kita bagi 5 kolom: Spend, Omset, Rasio, Target, Gap Card
+    col1, col2, col3, col4, col5 = st.columns([1.5, 1.5, 1, 1, 1])
+
+    # Col 1: Total Ad Spend (Delta Inverse: Merah jika naik)
+    col1.metric(
+        "Total Ad Spend",
+        format_rupiah(total_spending_ads),
+        delta=f"{delta_spending:.2f} %",
+        delta_color="inverse",
+        border=True,
+        help="Spending iklan harian yang diinputkan oleh Tim Advertiser",
+    )
+
+    # Col 2: Omset (Delta Normal: Hijau jika naik)
+    col2.metric(
+        "Omset Berjalan (Pesanan)",
+        format_rupiah(total_omset_ads),
+        delta=f"{delta_omset:.2f} %",
+        delta_color="normal",
+        border=True,
+        help="Pendapatan estimasi omset berjalan dari data pesanan BigSeller",
+    )
+
+    # Col 3: Rasio (Delta Inverse: Merah jika naik/makin boros)
+    tooltip_rumus = r"""
+    **Rumus Perhitungan:**
+    
+    $$
+    \text{Rasio} = \frac{\text{Total Biaya Iklan (Ads Spend)}}{\text{Omset Berjalan (Net Order Value)}} \times 100\%
+    $$
+    
+    *Formula ini menghitung efisiensi biaya iklan terhadap pendapatan kotor yang dihasilkan.*
+    """
+
+    col3.metric(
+        "Rasio Ads/Omset",
+        f"{rasio_ads_overall:.2f} %",
+        delta=f"{delta_rasio:.2f} %",
+        delta_color="inverse",
+        border=True,
+        help=tooltip_rumus,
+    )
+
+    # Col 4: Target (Statis)
+    tooltip_gap = """
+    **Panduan Indikator Warna Gap:**
+    
+    Gap dihitung dari selisih `Target - Rasio Aktual`.
+    
+    🔴 **Merah (Boros / Over Budget)**
+    Kondisi: `% Ads/Omset > Target`
+    Pengeluaran iklan melebihi batas target yang ditentukan. Perlu efisiensi biaya.
+    
+    🔴 **Merah (Terlalu Irit / Underspending)**
+    Kondisi: `Gap > 5%`
+    Pengeluaran iklan terlalu rendah (di bawah target > 5%). Ini bisa berarti potensi omset belum dimaksimalkan ("uang nganggur").
+    
+    🟢 **Hijau (Ideal / On Track)**
+    Kondisi: `Gap ≤ 5%` (dan Rasio < Target)
+    Penggunaan anggaran efisien dan optimal (berada di zona aman 0-5% dari target).
+    """
+
+    col4.metric(
+        "Target",
+        f"{target_rasio:.2f} %",
+        border=True,
+        delta=0,
+        delta_color="off",
+        help=tooltip_gap,
+    )
+
+    # Col 5: Custom Gap Card (Background Color)
+    with col5:
+        st.markdown(
+            f"""
+            <div style="
+                border: 1px solid rgba(49, 51, 63, 0.2);
+                border-radius: 0.5rem;
+                padding: 1rem 0.5rem;
+                background-color: {indicator_color};
+                height: 100%;
+                min-height: 100px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: flex-start;
+                padding-left: 15px;
+            ">
+                <div style="font-size: 14px; color: rgba(255, 255, 255, 0.9); margin-bottom: 4px;">
+                    Gap
+                </div>
+                <div style="font-size: 30px; font-weight: 700; color: #FFFFFF;">
+                    {gap:.2f} %
+                </div>
+                <div style="font-size: 14px; color: rgba(255, 255, 255, 0.9); margin-top: 4px;">
+                    {status_desc}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.divider()
 
-    # --- 3. Line Chart Harian ---
+    # ==========================================
+    # 5. CHART HARIAN
+    # ==========================================
     st.subheader("Total Omset Berjalan vs Ads Spend Harian")
     try:
         df_ads["tanggal"] = pd.to_datetime(df_ads["tanggal"]).dt.date
     except Exception as e:
-        st.error(f"Gagal memproses kolom 'tanggal' di df_ads. Detail: {e}")
+        st.error(f"Gagal memproses kolom 'tanggal'. Detail: {e}")
         st.stop()
 
     df_omset_daily = (
@@ -1450,7 +1531,9 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
 
     st.divider()
 
-    # --- 4. Tabel Detail per Toko ---
+    # ==========================================
+    # 6. TABEL DETAIL
+    # ==========================================
     st.subheader("Detail Performa Iklan per Toko")
 
     df_ads_by_store = (
@@ -1462,16 +1545,14 @@ def display_ads_performance(project_id, project_name, tgl_awal, tgl_akhir):
         (df_ads_by_store["total_spending"] / df_ads_by_store["total_omset"]) * 100
     ).fillna(0)
 
-    # Gunakan fungsi helper refactoring
+    # Menggunakan fungsi helper formatting & styling yang sudah ada
     df_ads_by_store = calculate_ads_status(
         df_ads_by_store, target_rasio, safe_zone_start
     )
     styled_df_by_store = style_ads_dataframe(df_ads_by_store)
     st.dataframe(styled_df_by_store, width="stretch")
 
-    # --- 5. Tabel Detail Harian (dalam Expander) ---
     with st.expander("Detail Performa Iklan Toko per Tanggal"):
-        # Gunakan fungsi helper refactoring
         df_ads_detailed = calculate_ads_status(df_ads, target_rasio, safe_zone_start)
         styled_df_detailed = style_ads_dataframe(df_ads_detailed)
         st.dataframe(styled_df_detailed, width="stretch")
@@ -1489,11 +1570,9 @@ def display_marketing_dashboard(project_id: int, project_name: str):
     with col_header:
         pass
     with col_filter:
-        today = date.today()
-        start_default = today.replace(day=1)
         date_range = st.date_input(
             "Pilih Periode Analisis:",
-            value=(start_default, get_yesterday_in_jakarta()),
+            value=(get_yesterday_in_jakarta(), get_yesterday_in_jakarta()),
             key=f"date_filter_{project_name}",
         )
 
@@ -1506,8 +1585,11 @@ def display_marketing_dashboard(project_id: int, project_name: str):
         f"Periode: {tgl_awal.strftime('%d %B %Y')} s/d {tgl_akhir.strftime('%d %B %Y')}"
     )
 
+    today = date.today()
+    start_default = today.replace(day=1)
+
     # --- Bagian 1: Analisis Omset (Modular) ---
-    display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir)
+    display_omset_summary(project_id, project_name, start_default, tgl_akhir)
 
     st.divider()
 
