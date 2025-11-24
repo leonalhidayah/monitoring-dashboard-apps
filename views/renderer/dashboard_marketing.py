@@ -264,7 +264,7 @@ def display_ads_metrics_snapshot(project_id, project_name, tgl_akhir):
         delta=f"{delta_omset:.2f} %",
         delta_color="normal",
         border=True,
-        help="""Total omset akumulatif dari Tgl 1 sampai H-1.  
+        help="""Estimasi total omset akumulatif dari Tgl 1 sampai H-1.  
         Data bersumber dari data total pesanan BigSeller""",
     )
 
@@ -420,8 +420,8 @@ def display_marketing_dashboard(project_id: int, project_name: str):
     today = date.today()
     start_of_month = today.replace(day=1)
 
-    col_header, col_filter = st.columns(
-        [3, 1], gap="medium", vertical_alignment="bottom"
+    col_header, col_filter, col_refresh = st.columns(
+        [6, 2, 0.6], vertical_alignment="bottom"
     )
 
     with col_header:
@@ -434,6 +434,18 @@ def display_marketing_dashboard(project_id: int, project_name: str):
             key=f"date_filter_{project_name}",
         )
 
+    with col_refresh:
+        # Tombol untuk clear cache
+        if st.button(
+            label=" ", icon=":material/cached:", help="Refresh Data", width="stretch"
+        ):
+            st.cache_data.clear()
+            st.toast(
+                "Mengambil data terbaru...",
+                icon=":material/check_box:",
+            )
+            st.rerun()
+
     # Validasi Range
     if not (isinstance(date_range, tuple) and len(date_range) == 2):
         st.warning("Pilih rentang tanggal lengkap.")
@@ -445,7 +457,7 @@ def display_marketing_dashboard(project_id: int, project_name: str):
 
     # 1. OMSET SUMMARY (Selalu MTD)
     # Tidak peduli filter user, boss ingin lihat performa bulan ini.
-    display_omset_summary(project_id, project_name, start_of_month, tgl_akhir_filter)
+    display_omset_summary(project_id, project_name, tgl_awal_filter, tgl_akhir_filter)
 
     st.markdown("---")
 
