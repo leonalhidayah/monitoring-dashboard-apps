@@ -1,5 +1,5 @@
 import calendar
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 import numpy as np
 import pandas as pd
@@ -166,32 +166,47 @@ def display_omset_summary(project_id, project_name, tgl_awal, tgl_akhir):
 
 
 # ==============================================================================
-# 2. BAGIAN ADS METRICS (TACTICAL - DAILY SNAPSHOT)
+# 2. BAGIAN ADS METRICS
 # ==============================================================================
 def display_ads_metrics_snapshot(project_id, project_name, tgl_akhir):
     """
-    Menampilkan Kartu Metrik Iklan khusus untuk H-1 vs H-2 (Daily Pulse).
-    Tidak terpengaruh oleh filter tanggal global.
+    Menampilkan Kartu Metrik Iklan Akumulatif (MTD).
+    Range: Tgl 1 Bulan Ini s/d H-1 (Kemarin).
+    Pembanding: Tgl 1 Bulan Lalu s/d Tanggal yang sama di Bulan Lalu.
     """
-    # --- Hitung Tanggal (H-1 dan H-2) ---
-    tgl_snapshot = tgl_akhir
-    tgl_pembanding = tgl_akhir - timedelta(days=1)  # Kemarin Lusa (H-2)
+    # ==========================================
+    # 1. LOGIKA TANGGAL (MTD)
+    # ==========================================
+    # Cutoff Current (H-1 dari tgl_akhir yang dipilih)
+    tgl_cutoff_curr = tgl_akhir
+
+    # Paksa Start Date jadi Tanggal 1 bulan tersebut
+    tgl_start_curr = tgl_cutoff_curr.replace(day=1)
+
+    # Periode Pembanding (Bulan Lalu)
+    tgl_cutoff_prev = (pd.Timestamp(tgl_cutoff_curr) - pd.DateOffset(months=1)).date()
+    tgl_start_prev = tgl_cutoff_prev.replace(day=1)
 
     st.subheader("Performa Iklan Terkini")
     st.caption(
-        f"Menampilkan snapshot performa **{tgl_snapshot.strftime('%d %b %Y')}** (Kemarin) dibandingkan dengan **{tgl_pembanding.strftime('%d %b %Y')}**."
+        f"Menampilkan performa akumulatif **{tgl_start_curr.strftime('%d %b')} - {tgl_cutoff_curr.strftime('%d %b %Y')}** "
+        f"dibandingkan dengan periode yang sama bulan lalu (**{tgl_start_prev.strftime('%d %b')} - {tgl_cutoff_prev.strftime('%d %b %Y')}**)."
     )
 
-    # --- Ambil Data Snapshot (H-1) ---
-    df_curr = get_vw_ads_performance_summary(project_name, tgl_snapshot, tgl_snapshot)
+    # --- Ambil Data Snapshot (MTD Current) ---
+    df_curr = get_vw_ads_performance_summary(
+        project_name, tgl_start_curr, tgl_cutoff_curr
+    )
 
-    # --- Ambil Data Pembanding (H-2) ---
+    # --- Ambil Data Pembanding (MTD Previous) ---
     df_prev = get_vw_ads_performance_summary(
-        project_name, tgl_pembanding, tgl_pembanding
+        project_name, tgl_start_prev, tgl_cutoff_prev
     )
 
     if df_curr.empty:
-        st.warning(f"Belum ada data iklan untuk tanggal {tgl_snapshot}.")
+        st.warning(
+            f"Belum ada data iklan akumulatif hingga {tgl_cutoff_curr.strftime('%d %b %Y')}."
+        )
         return
 
     # --- Kalkulasi Current ---
@@ -205,14 +220,19 @@ def display_ads_metrics_snapshot(project_id, project_name, tgl_akhir):
     rasio_prev = (spend_prev / omset_prev * 100) if omset_prev > 0 else 0
 
     # --- Kalkulasi Delta ---
-    delta_spend = (spend_curr - spend_prev) * 100 / spend_prev
-    delta_omset = (omset_curr - omset_prev) * 100 / omset_prev
+    # Menggunakan logika % growth untuk spend & omset
+    delta_spend = (
+        ((spend_curr - spend_prev) / spend_prev * 100) if spend_prev > 0 else 0
+    )
+    delta_omset = (
+        ((omset_curr - omset_prev) / omset_prev * 100) if omset_prev > 0 else 0
+    )
     delta_rasio = rasio_curr - rasio_prev
 
     # --- Target & Logic Warna ---
-    # Ambil target rasio bulan dari tgl_snapshot
-    quarter = (tgl_snapshot.month - 1) // 3 + 1
-    target_rasio = get_target_ads_ratio(project_id, tgl_snapshot.year, quarter) or 0
+    # Ambil target rasio bulan dari tgl_cutoff_curr
+    quarter = (tgl_cutoff_curr.month - 1) // 3 + 1
+    target_rasio = get_target_ads_ratio(project_id, tgl_cutoff_curr.year, quarter) or 0
 
     gap = target_rasio - rasio_curr
 
@@ -230,20 +250,22 @@ def display_ads_metrics_snapshot(project_id, project_name, tgl_akhir):
     col1, col2, col3, col4, col5 = st.columns([1.5, 1.5, 1, 1, 1])
 
     col1.metric(
-        "Ad Spend (Kemarin)",
+        "Ad Spend",
         format_rupiah(spend_curr),
         delta=f"{delta_spend:.2f} %",
         delta_color="inverse",
         border=True,
-        help="Pengeluaran iklan yang diinputkan oleh Tim Advertiser",
+        help="""Total pengeluaran iklan akumulatif dari Tgl 1 sampai H-1.  
+        Data bersumber dari input data Tim Advertiser""",
     )
     col2.metric(
-        "Total Omset Berjalan (Kemarin)",
+        "Omset Berjalan (Total Pesanan)",
         format_rupiah(omset_curr),
         delta=f"{delta_omset:.2f} %",
         delta_color="normal",
         border=True,
-        help="Pendapatan estimasi omset berjalan dari data pesanan BigSeller",
+        help="""Total omset akumulatif dari Tgl 1 sampai H-1.  
+        Data bersumber dari data total pesanan BigSeller""",
     )
 
     # Tooltip Rumus LaTeX
@@ -398,29 +420,14 @@ def display_marketing_dashboard(project_id: int, project_name: str):
     today = date.today()
     start_of_month = today.replace(day=1)
 
-    # st.title(f"📊 Dashboard Marketing: {project_name}")
-
-    # # --- GLOBAL FILTER (Hanya untuk Chart & Tabel) ---
-    # # Taruh di atas atau sidebar agar jelas ini input user
-    # with st.container():
-    #     col_space, col_filter = st.columns([2, 1])
-    #     with col_filter:
-    #         date_range = st.date_input(
-    #             "Filter Tanggal (Untuk Grafik & Tabel):",
-    #             value=(start_of_month, get_yesterday_in_jakarta()),
-    #             key=f"date_filter_{project_name}",
-    #         )
-
     col_header, col_filter = st.columns(
         [3, 1], gap="medium", vertical_alignment="bottom"
     )
 
     with col_header:
-        # Judul sekarang di dalam kolom kiri
         st.title(f"📊 Dashboard Marketing: {project_name}")
 
     with col_filter:
-        # Filter sekarang di dalam kolom kanan
         date_range = st.date_input(
             "Filter Tanggal (Untuk Grafik & Tabel):",
             value=(start_of_month, get_yesterday_in_jakarta()),
@@ -442,8 +449,7 @@ def display_marketing_dashboard(project_id: int, project_name: str):
 
     st.markdown("---")
 
-    # 2. ADS METRICS (Selalu H-1 vs H-2)
-    # Snapshot cepat performa kemarin.
+    # 2. ADS METRICS
     display_ads_metrics_snapshot(project_id, project_name, tgl_akhir_filter)
 
     st.markdown("---")

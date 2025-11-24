@@ -246,6 +246,7 @@ def get_vw_admin_shipments_delivery():
     return get_table_data(table_name="vw_admin_shipments_delivery")
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_target_ads_ratio(project_id: int, year: int, quarter: int) -> float | None:
     """
     Mengambil target rasio ads/omset dari budget plan untuk kuartal tertentu.
@@ -311,6 +312,7 @@ def get_finance_budget_non_ads():
 #     return get_table_data(table_name="vw_budget_ads_monitoring")
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_vw_ads_performance_summary(
     project_name: str, start_date: date, end_date: date
 ) -> pd.DataFrame:
