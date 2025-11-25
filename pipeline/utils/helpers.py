@@ -287,3 +287,9 @@ def fillna_currency_with_rules(
 def fillna_by_other_column(df, fill_col, reference_col):
     df[fill_col] = df[fill_col].fillna(df[reference_col])
     return df
+
+
+def fill_currency_for_missing_buyer(df, currency_cols):
+    mask = df["Nama Pembeli"].isna()
+    df.loc[mask, currency_cols] = df.loc[mask, currency_cols].fillna(0)
+    return df

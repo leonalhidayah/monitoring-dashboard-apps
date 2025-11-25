@@ -14,6 +14,7 @@ from pipeline.utils.helpers import (
     clean_currency_columns,
     clean_datetime_columns,
     clean_object_columns,
+    fill_currency_for_missing_buyer,
     fillna_by_other_column,
     fillna_currency_with_rules,
     fix_misconverted_currency,
@@ -77,23 +78,15 @@ def standardize_silver_data(df):
         df["Diskon Ongkos Kirim Marketplace"]
     )
 
-    target_cols_zero_to_nan = [
-        "Total Pesanan",
-        "Subtotal Produk",
-    ]  # Tambahkan kolom lain jika ada logic serupa
+    df["Nama Pembeli"] = df["Nama Pembeli"].replace(["", " ", "nan", "None"], np.nan)
 
-    for col in target_cols_zero_to_nan:
-        if col in df.columns:
-            df[col] = df[col].replace(0, np.nan)
+    df = fill_currency_for_missing_buyer(df, currency_cols)
 
     df = fillna_currency_with_rules(df)
     df = fillna_currency_with_rules(df, fill_col="Subtotal Produk")
     df["Harga Satuan"] = df["Harga Satuan"].fillna(df["Subtotal Produk"] / df["Jumlah"])
     df = fillna_by_other_column(
         df, fill_col="Harga Awal Produk", reference_col="Harga Satuan"
-    )
-    df = fillna_by_other_column(
-        df, fill_col="Nama Pembeli", reference_col="Nama Penerima"
     )
 
     df = clean_datetime_columns(df, datetime_cols)
