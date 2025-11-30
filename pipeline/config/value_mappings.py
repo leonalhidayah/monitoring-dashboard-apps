@@ -41,7 +41,7 @@ SHIPPING_PROVIDER_MAP = {
     # --- JNE ---
     "Reguler (Cashless)-JNE Reguler": "JNE Reguler",
     "JNE Reguler": "JNE Reguler",
-    "standard": "LEX ID"
+    "standard": "LEX ID",
 }
 
 # Mapping Metode Pembayaran
@@ -117,146 +117,134 @@ PROVINCE_MAPPING = {
     "jakarta": "DKI Jakarta",
     "jakarta raya": "DKI Jakarta",
     "daerah khusus ibukota jakarta": "DKI Jakarta",
-    
+    "jakarta province": "DKI Jakarta",
     # Jawa Barat
     "jawa barat": "Jawa Barat",
     "west java": "Jawa Barat",
     "jabar": "Jawa Barat",
-    
+    "java occidental": "Jawa Barat",
+    "west java province": "Jawa Barat",
     # Jawa Tengah
     "jawa tengah": "Jawa Tengah",
     "central java": "Jawa Tengah",
     "jateng": "Jawa Tengah",
-    
     # DI Yogyakarta
     "d.i. yogyakarta": "DI Yogyakarta",
     "daerah istimewa yogyakarta": "DI Yogyakarta",
     "yogyakarta": "DI Yogyakarta",
     "diy": "DI Yogyakarta",
-    
+    "di yogyakarta": "DI Yogyakarta",
     # Jawa Timur
     "jawa timur": "Jawa Timur",
     "east java": "Jawa Timur",
     "jatim": "Jawa Timur",
-    
+    "east java province": "Jawa Timur",
     # Banten
     "banten": "Banten",
-    
+    "banten province": "Banten",
     # Bali
     "bali": "Bali",
-    
+    "bali province": "Bali",
     # Nusa Tenggara Barat
     "nusa tenggara barat": "Nusa Tenggara Barat",
     "nusa tenggara barat (ntb)": "Nusa Tenggara Barat",
     "ntb": "Nusa Tenggara Barat",
-    
+    "'west nusa tenggara": "Nusa Tenggara Barat",
     # Nusa Tenggara Timur
     "nusa tenggara timur": "Nusa Tenggara Timur",
     "nusa tenggara timur (ntt)": "Nusa Tenggara Timur",
     "ntt": "Nusa Tenggara Timur",
-    
+    "'east nusa tenggara": "Nusa Tenggara Timur",
     # Sumatera Utara
     "sumatera utara": "Sumatera Utara",
     "north sumatera": "Sumatera Utara",
+    "north sumatra province": "Sumatera Utara",
     "sumut": "Sumatera Utara",
-    
     # Sumatera Barat
     "sumatera barat": "Sumatera Barat",
     "west sumatera": "Sumatera Barat",
+    "west sumatra": "Sumatera Barat",
     "sumbar": "Sumatera Barat",
-    
+    "west sumatra province": "Sumatera Barat",
     # Riau
     "riau": "Riau",
-    
     # Kepulauan Riau
     "kepulauan riau": "Kepulauan Riau",
     "kepri": "Kepulauan Riau",
-    
+    "riau islands province": "Kepulauan Riau",
+    "riau islands": "Kepulauan Riau",
     # Jambi
     "jambi": "Jambi",
-    
     # Sumatera Selatan
     "sumatera selatan": "Sumatera Selatan",
     "south sumatera": "Sumatera Selatan",
     "sumsel": "Sumatera Selatan",
-    
+    "south sumatra": "Sumatera Selatan",
     # Bengkulu
     "bengkulu": "Bengkulu",
-    
     # Bangka Belitung
     "bangka belitung": "Bangka Belitung",
     "kepulauan bangka belitung": "Bangka Belitung",
     "babel": "Bangka Belitung",
-    
+    "bangka belitung islands": "Bangka Belitung",
     # Lampung
     "lampung": "Lampung",
-    
+    "lampung province": "Lampung",
     # Kalimantan Barat
     "kalimantan barat": "Kalimantan Barat",
     "west kalimantan": "Kalimantan Barat",
     "kalbar": "Kalimantan Barat",
-    
     # Kalimantan Tengah
     "kalimantan tengah": "Kalimantan Tengah",
     "central kalimantan": "Kalimantan Tengah",
     "kalteng": "Kalimantan Tengah",
-    
+    "central kalimantan province": "Kalimantan Tengah",
     # Kalimantan Selatan
     "kalimantan selatan": "Kalimantan Selatan",
     "south kalimantan": "Kalimantan Selatan",
     "kalsel": "Kalimantan Selatan",
-    
     # Kalimantan Timur
     "kalimantan timur": "Kalimantan Timur",
     "east kalimantan": "Kalimantan Timur",
     "kaltim": "Kalimantan Timur",
-    
     # Kalimantan Utara
     "kalimantan utara": "Kalimantan Utara",
     "north kalimantan": "Kalimantan Utara",
     "kalut": "Kalimantan Utara",
-    
     # Sulawesi Utara
     "sulawesi utara": "Sulawesi Utara",
     "north sulawesi": "Sulawesi Utara",
     "sulut": "Sulawesi Utara",
-    
+    "north sulawesi province": "Sulawesi Utara",
     # Sulawesi Tengah
     "sulawesi tengah": "Sulawesi Tengah",
     "central sulawesi": "Sulawesi Tengah",
     "sulteng": "Sulawesi Tengah",
-    
     # Sulawesi Selatan
     "sulawesi selatan": "Sulawesi Selatan",
     "south sulawesi": "Sulawesi Selatan",
     "sulsel": "Sulawesi Selatan",
-    
     # Sulawesi Tenggara
     "sulawesi tenggara": "Sulawesi Tenggara",
     "southeast sulawesi": "Sulawesi Tenggara",
     "sultra": "Sulawesi Tenggara",
-    
+    "southeast sulawesi province": "Sulawesi Tenggara",
     # Sulawesi Barat
     "sulawesi barat": "Sulawesi Barat",
     "west sulawesi": "Sulawesi Barat",
     "sulbar": "Sulawesi Barat",
-    
     # Gorontalo
     "gorontalo": "Gorontalo",
-    
     # Aceh
     "aceh": "Aceh",
     "nanggroe aceh darussalam": "Aceh",
     "nanggroe aceh darussalam (nad)": "Aceh",
     "d.i. aceh": "Aceh",
-    
     # Maluku
     "maluku": "Maluku",
-    
     # Maluku Utara
     "maluku utara": "Maluku Utara",
     "north maluku": "Maluku Utara",
-    
     # Papua
     "papua": "Papua",
     "papua barat": "Papua Barat",

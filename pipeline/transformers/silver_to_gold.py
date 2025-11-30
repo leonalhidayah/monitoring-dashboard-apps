@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 
 import pandas as pd
 import streamlit as st  # Kita gunakan untuk st.info di orkestrator
@@ -167,9 +166,7 @@ def _build_dim_products(df_silver, brand_key_map: dict):
 
 
 # Fact Table Builder with Linking and Aggregation
-def _build_fact_orders(
-    df_clean_silver: pd.DataFrame, key_maps: dict, batch_config: dict
-) -> pd.DataFrame:
+def _build_fact_orders(df_clean_silver: pd.DataFrame, key_maps: dict) -> pd.DataFrame:
     """
     Menyiapkan DataFrame fact_orders yang tertaut dengan Foreign Keys.
     Menerima 'key_maps' (dict berisi DataFrame kecil) dari orkestrator.
@@ -177,20 +174,55 @@ def _build_fact_orders(
 
     natural_key_cols_silver = ["Nama Pembeli", "Nomor Telepon", "Alamat Lengkap"]
     natural_key_cols_gold = ["nama_pembeli", "no_telepon", "alamat_lengkap"]
+    timestamp_source_col = "Tanggal Gudang"
 
+    # 1. Validasi Key Map
     customer_id_map_df = key_maps.get("customers")
     if customer_id_map_df is None:
         raise ValueError("Customer key map (DataFrame) tidak ditemukan di key_maps.")
 
+    # 2. Siapkan Data Fakta
     fact_cols_silver = list(ORDERS_MAP.keys())
 
+    # Strict Check 1
+    if timestamp_source_col not in df_clean_silver.columns:
+        raise ValueError(
+            f"CRITICAL ERROR: Kolom wajib '{timestamp_source_col}' tidak ditemukan di file input! "
+            "Mohon pastikan tim gudang menggunakan template terbaru."
+        )
+
+    #    Copy data
     df_fact = df_clean_silver[fact_cols_silver + natural_key_cols_silver].copy()
 
+    # 3. Validasi Data Kosong (Strict Check 2)
+    if df_fact[timestamp_source_col].isnull().any():
+        missing_count = df_fact[timestamp_source_col].isnull().sum()
+        sample_missing = (
+            df_fact[df_fact[timestamp_source_col].isnull()]["Nomor Pesanan"]
+            .head(3)
+            .tolist()
+        )
+
+        raise ValueError(
+            f"VALIDASI GAGAL: Ditemukan {missing_count} pesanan dengan '{timestamp_source_col}' KOSONG. "
+            f"Kolom ini wajib diisi. Contoh Pesanan: {sample_missing}"
+        )
+
+    # 4. Konversi Date -> Timestamp (PostgreSQL Compatible)
+    try:
+        df_fact[timestamp_source_col] = pd.to_datetime(df_fact[timestamp_source_col])
+    except Exception as e:
+        raise ValueError(
+            f"Gagal mengonversi '{timestamp_source_col}' ke format Timestamp: {e}"
+        )
+
+    # 5. Deduplikasi & Rename
     df_fact = df_fact.drop_duplicates(subset=["Nomor Pesanan"])
 
     df_fact = df_fact.rename(columns=ORDERS_MAP)
     df_fact = df_fact.rename(columns=CUSTOMERS_MAP)
 
+    # 6. Linking (Merge dengan Customer Map)
     df_fact_linked = pd.merge(
         df_fact,
         customer_id_map_df,
@@ -198,10 +230,7 @@ def _build_fact_orders(
         how="left",
     )
 
-    input_timestamp = batch_config.get("run_timestamp", datetime.now())
-
-    df_fact_linked["timestamp_input_data"] = input_timestamp
-
+    # 7. Handle Missing Customer IDs
     if df_fact_linked["customer_id"].isnull().any():
         missing_count = df_fact_linked["customer_id"].isnull().sum()
         logging.warning(
@@ -212,6 +241,7 @@ def _build_fact_orders(
             df_fact_linked["customer_id"].fillna(9999).astype(int)
         )
 
+    # 8. Validasi Skema
     return schemas.orders_schema.validate(df_fact_linked)
 
 
@@ -425,13 +455,12 @@ def _build_fact_payments(df_clean_silver: pd.DataFrame, key_maps: dict) -> pd.Da
 
 
 # ORCHESTRATOR UTILITIES
-def process_silver_to_gold(df_clean_silver: pd.DataFrame, batch_config: dict):
+def process_silver_to_gold(df_clean_silver: pd.DataFrame):
     """
     Orkestrator pipeline Silver -> Gold (Metode Serial yang Dioptimalkan).
 
     Args:
         df_clean_silver: DataFrame bersih dari silver_standardizer.
-        batch_config: Dictionary berisi parameter run-time (cth: {'run_timestamp': ...})
     """
 
     st.info("Memulai pipeline Silver-to-Gold...")
@@ -568,7 +597,7 @@ def process_silver_to_gold(df_clean_silver: pd.DataFrame, batch_config: dict):
         st.info("5/5: Membangun tabel fakta (linking)...")
 
         # 5A. Bangun DataFrame (T5 - Transform)
-        fact_orders = _build_fact_orders(df_clean_silver, key_maps, batch_config)
+        fact_orders = _build_fact_orders(df_clean_silver, key_maps)
 
         fact_order_items = _build_fact_order_items(df_clean_silver, key_maps)
         fact_shipments = _build_fact_shipments(df_clean_silver, key_maps)

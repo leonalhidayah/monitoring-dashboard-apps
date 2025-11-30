@@ -1,7 +1,6 @@
 import logging
 import re
 import warnings
-from datetime import datetime
 
 import streamlit as st
 
@@ -35,41 +34,12 @@ with admin_marketplace_tab:
     )
 
     st.markdown("---")
-    st.subheader("Parameter Waktu Proses")
-    st.caption("Setel tanggal/waktu jika Anda memproses data historis (backfill).")
-
-    if "selected_date" not in st.session_state:
-        st.session_state.selected_date = get_now_in_jakarta().date()
-
-    if "selected_time" not in st.session_state:
-        st.session_state.selected_time = get_now_in_jakarta().time()
-
-    col1, col2 = st.columns(2)
-    with col1:
-        input_date = st.date_input(
-            "Pilih tanggal input",
-            key="selected_date",
-        )
-    with col2:
-        input_time = st.time_input(
-            "Pilih waktu input",
-            key="selected_time",
-        )
-
-    st.markdown("---")
 
     if st.button("Mulai Proses", type="primary", width="stretch"):
         if uploaded_file is None:
             st.warning("Mohon upload file terlebih dahulu sebelum memproses.")
         else:
             try:
-                # Menggabungkan tanggal dan waktu dari widget
-                run_timestamp = datetime.combine(input_date, input_time)
-
-                # Ini adalah dictionary yang akan diteruskan ke pipeline
-                batch_config = {"run_timestamp": run_timestamp}
-                st.write(f"Memproses data untuk timestamp: `{run_timestamp}`")
-
                 # --- Standardisasi (Silver) ---
                 df_clean_silver = None
                 with st.spinner("Langkah 1/2: Menstandardisasi data (Cleaning)..."):
@@ -88,7 +58,7 @@ with admin_marketplace_tab:
                         "Langkah 2/2: Memproses & memuat data ke Database Gold... (Ini mungkin butuh waktu)"
                     ):
                         # Orchestrator untuk proses Silver ke Gold
-                        success = process_silver_to_gold(df_clean_silver, batch_config)
+                        success = process_silver_to_gold(df_clean_silver)
 
                     if success:
                         st.success("SEMUA PROSES SELESAI! Database telah diperbarui.")

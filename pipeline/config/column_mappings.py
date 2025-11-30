@@ -107,6 +107,7 @@ ORDERS_MAP = {
     "Waktu Proses": "waktu_proses",
     "Waktu Selesai": "waktu_selesai",
     "Waktu Pembatalan": "waktu_pembatalan",
+    "Tanggal Gudang": "timestamp_input_data",
 }
 ORDER_ITEMS_MAP = {
     "Nomor Pesanan": "order_id",

@@ -51,6 +51,7 @@ try:
             "Gudang": Column(str, nullable=True),
             "Sesi Pengiriman": Column(str, nullable=True),
             "Jenis Resi": Column(str, nullable=True),
+            "Tanggal Gudang": Column(pa.DateTime, nullable=True),
         },
         strict="filter",  # "filter" akan menghapus kolom yg tidak ada di skema
         coerce=True,  # Tetap paksa tipe data
