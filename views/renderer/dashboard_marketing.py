@@ -1,5 +1,5 @@
 import calendar
-from datetime import date, datetime
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -417,8 +417,8 @@ def display_marketing_dashboard(project_id: int, project_name: str):
     """
 
     # --- SETUP WAKTU DEFAULT ---
-    today = date.today()
-    start_of_month = today.replace(day=1)
+    yesterday = get_yesterday_in_jakarta()
+    start_of_month = yesterday.replace(day=1)
 
     col_header, col_filter, col_refresh = st.columns(
         [6, 2, 0.6], vertical_alignment="bottom"
