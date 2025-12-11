@@ -1,20 +1,7 @@
-from datetime import datetime, timedelta
-
-import pytz
 import streamlit as st
 
 from database.queries import dimmension_query as dim
-
-
-def get_yesterday_in_jakarta():
-    tz = pytz.timezone("Asia/Jakarta")
-    return (datetime.now(tz) - timedelta(days=1)).date()
-
-
-def get_now_in_jakarta():
-    tz = pytz.timezone("Asia/Jakarta")
-    return datetime.now(tz)
-
+from views.config import get_now_in_jakarta, get_yesterday_in_jakarta
 
 # =============================================================================
 # KONFIGURASI PUSAT UNTUK SEMUA TABEL DATA MANAGEMENT
